@@ -21,7 +21,7 @@ class SpecialPartsOrderController extends Controller
 
     public function index()
     {
-        $tab=SpecialPartsOrder::where('store_id',$this->sdc->storeID())->get();
+        $tab=SpecialPartsOrder::where('store_id',$this->sdc->storeID())->orderBy('id','DESC')->take(100)->get();
         return view('apps.pages.customer.customer-lead',['existing_cus'=>$tab]);
     }
 
@@ -99,7 +99,7 @@ class SpecialPartsOrderController extends Controller
      */
     public function show(SpecialPartsOrder $SpecialPartsOrder)
     {
-        $tab=$SpecialPartsOrder::where('store_id',$this->sdc->storeID())->get();
+        $tab=$SpecialPartsOrder::where('store_id',$this->sdc->storeID())->orderBy('id','DESC')->take(100)->get();
         return view('apps.pages.orderparts.list',['dataTable'=>$tab]);
     }
 

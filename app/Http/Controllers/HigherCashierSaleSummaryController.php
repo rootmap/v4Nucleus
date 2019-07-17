@@ -27,12 +27,27 @@ class HigherCashierSaleSummaryController extends Controller
             $cashier_id=$request->cashier_id;
         }
 
-        $invoice=HigherCashierSaleSummary::where('store_id',$this->sdc->storeID())
+        
+                     //->toSql();
+
+        if(empty($cashier_id))
+        {
+            $invoice=HigherCashierSaleSummary::where('store_id',$this->sdc->storeID())
+                     ->when($cashier_id, function ($query) use ($cashier_id) {
+                            return $query->where('cashier_id','=', $cashier_id);
+                     })
+                     ->orderBy('id','DESC')
+                     ->take(100)
+                     ->get();
+        }
+        else
+        {
+            $invoice=HigherCashierSaleSummary::where('store_id',$this->sdc->storeID())
                      ->when($cashier_id, function ($query) use ($cashier_id) {
                             return $query->where('cashier_id','=', $cashier_id);
                      })
                      ->get();
-                     //->toSql();
+        }
 
         //dd($tender_id);              
 

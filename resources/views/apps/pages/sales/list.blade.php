@@ -176,7 +176,7 @@
                                         @if($row->invoice_status=="Due")
                                         <span class="btn btn-green btn-darken-4">{{$row->invoice_status}}</span>
                                         @elseif($row->invoice_status=="Partial")
-                                        <span class="btn btn-green  btn-lighten-1">{{$row->invoice_status}}</span>
+                                        <a href="{{url('sales/partial/add/payment/'.$row->invoice_id)}}" class="btn btn-green  btn-lighten-1">{{$row->invoice_status}}</a>
                                         @elseif($row->invoice_status=="Paid")
                                         <span class="btn btn-green btn-darken-1">{{$row->invoice_status}}</span>
                                         @else

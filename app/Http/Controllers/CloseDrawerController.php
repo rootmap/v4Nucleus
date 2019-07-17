@@ -128,9 +128,23 @@ class CloseDrawerController extends Controller
         }
 
 
-
-
-        $tabledata=CloseDrawer::select('id','opeing_time','closing_time','opening_amount','closing_amount','cashier_name','created_at')
+        if(empty($user_id) && empty($dateString))
+        {
+            $tabledata=CloseDrawer::select('id','opeing_time','closing_time','opening_amount','closing_amount','cashier_name','created_at')
+                     ->where('store_id',$this->sdc->storeID())
+                     ->when($user_id, function ($query) use ($user_id) {
+                            return $query->where('cashier_id','=', $user_id);
+                     })
+                     ->when($dateString, function ($query) use ($dateString) {
+                            return $query->whereRaw($dateString);
+                     })
+                     ->orderBy('id','DESC')
+                     ->take(100)
+                     ->get();
+        }
+        else
+        {
+            $tabledata=CloseDrawer::select('id','opeing_time','closing_time','opening_amount','closing_amount','cashier_name','created_at')
                      ->where('store_id',$this->sdc->storeID())
                      ->when($user_id, function ($query) use ($user_id) {
                             return $query->where('cashier_id','=', $user_id);
@@ -139,6 +153,9 @@ class CloseDrawerController extends Controller
                             return $query->whereRaw($dateString);
                      })
                      ->get();
+        }
+
+        
                      //->toSql();
 
         //dd($tender_id);              

@@ -23,7 +23,7 @@ class BuybackController extends Controller
 
     public function index()
     {
-        $tab=Buyback::where('store_id',$this->sdc->storeID())->get();
+        $tab=Buyback::where('store_id',$this->sdc->storeID())->orderBy('id','DESC')->take(100)->get();
         return view('apps.pages.buyback.customer-lead',['existing_cus'=>$tab]);
     }
 
@@ -232,7 +232,7 @@ class BuybackController extends Controller
         }
         else
         {
-            $tab=\DB::table('buybacks')->where('store_id',$this->sdc->storeID())->get();
+            $tab=\DB::table('buybacks')->where('store_id',$this->sdc->storeID())->orderBy('id','DESC')->take(100)->get();
             return view('apps.pages.buyback.list',['dataTable'=>$tab]);
         }
     }
@@ -818,10 +818,29 @@ class BuybackController extends Controller
             $dateString="CAST(created_at as date) BETWEEN '".$start_date."' AND '".$end_date."'";
         }
 
-
-
-
-        $invoice=Buyback::select('id','customer_name','model','carrier','imei','price','condition','payment_method_name','keep_this_on','invoice_id','created_at')
+        if(empty($invoice_id) && empty($keep_this_on) && empty($customer_id) && empty($start_date) && empty($end_date) && empty($dateString))
+        {
+            $invoice=Buyback::select('id','customer_name','model','carrier','imei','price','condition','payment_method_name','keep_this_on','invoice_id','created_at')
+                     ->where('store_id',$this->sdc->storeID())
+                     ->when($invoice_id, function ($query) use ($invoice_id) {
+                            return $query->where('invoice_id','=', $invoice_id);
+                     })
+                     ->when($keep_this_on, function ($query) use ($keep_this_on) {
+                            return $query->where('keep_this_on','=', $keep_this_on);
+                     })                     
+                     ->when($customer_id, function ($query) use ($customer_id) {
+                            return $query->where('customer_id','=', $customer_id);
+                     })
+                     ->when($dateString, function ($query) use ($dateString) {
+                            return $query->whereRaw($dateString);
+                     })
+                     ->take(100)
+                     ->orderBy('id','DESC')
+                     ->get();
+        }
+        else
+        {
+            $invoice=Buyback::select('id','customer_name','model','carrier','imei','price','condition','payment_method_name','keep_this_on','invoice_id','created_at')
                      ->where('store_id',$this->sdc->storeID())
                      ->when($invoice_id, function ($query) use ($invoice_id) {
                             return $query->where('invoice_id','=', $invoice_id);
@@ -836,6 +855,10 @@ class BuybackController extends Controller
                             return $query->whereRaw($dateString);
                      })
                      ->get();
+        }
+
+
+        
                      //->toSql();
 
         //dd($tender_id);              

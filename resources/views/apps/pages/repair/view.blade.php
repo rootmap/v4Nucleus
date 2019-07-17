@@ -82,12 +82,17 @@
 				                    			<div class="col-md-12">
 					                    			<fieldset class="">
 														<div class="input-group">
-															<span class="input-group-addon"  style="@if($data->payment_status=="Pending") width: 210px; @else width: 120px; @endif text-align: left; background: white;" id="basic-addon11"><b>Payment Status @if($data->payment_status=="Pending") - (Pending) @endif</b></span>
-															@if($data->payment_status=="Pending")
+															<span class="input-group-addon"  style="@if($data->payment_status=="Pending") width: 210px; @else width: 120px; @endif text-align: left; background: white;" id="basic-addon11"><b>Payment Status 
+															@if($data->payment_status=="Pending" && $data->invoice_status!="Paid")
+															 - (Pending) 
+															@endif</b></span>
+															@if($data->payment_status=="Pending" && $data->invoice_status!="Paid")
 																<a class="btn btn-green btn-block" style="border-top-left-radius: 0px; border-bottom-left-radius: 0px;" href="{{url('pos/repair/'.$data->id)}}"> 
 																	<i class="icon-dollar"></i>{{$data->price}} to POS
 																</a>
-															@else
+															@elseif($data->invoice_status=="Paid")
+																<input readonly="readonly"  style="background: white;" name="email" type="text" class="form-control" placeholder="Button on right" aria-describedby="button-addon6" value="{{$data->invoice_status}}">
+															@else 
 																<input readonly="readonly"  style="background: white;" name="email" type="text" class="form-control" placeholder="Button on right" aria-describedby="button-addon6" value="{{$data->payment_status}}">
 															@endif
 														</div>

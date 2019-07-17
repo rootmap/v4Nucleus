@@ -399,6 +399,8 @@ Route::group(['middleware' => 'auth'], function () {
 
 	Route::get('/sales/partial/payment', 'InvoiceController@salesPartialAdd');
 
+	Route::get('/sales/partial/add/payment/{sales_id}', 'InvoiceController@salesPartialFromSalesReport');
+
 
 	//------------------Sales route end--------------------//
 
@@ -514,6 +516,7 @@ Route::group(['middleware' => 'auth'], function () {
 	//Route::get('/sales/invoice/print/pdf/{invoice_id}', 'InvoiceController@invoicePDF');
 	Route::get('/repair/print/{repair_id}', 'InStoreRepairController@showRepairPDF');
 	Route::get('/pos/repair/{repair_id}', 'InvoiceProductController@RepairPOS');
+	Route::get('/pos/repair/partial/{repair_id}', 'InvoiceProductController@partialRepairPOS');
 
 	Route::get('/settings/instore/device/list', 'InStoreRepairController@deviceList');
 	Route::get('/settings/instore/device/edit/{id}', 'InStoreRepairDeviceController@edit');

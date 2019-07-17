@@ -250,7 +250,28 @@ class TenderController extends Controller
             $dateString="CAST(created_at as date) BETWEEN '".$start_date."' AND '".$end_date."'";
         }
 
-        $tab=InvoicePayment::where('store_id',$this->sdc->storeID())
+        if(empty($invoice_id) && empty($tender_id) && empty($customer_id) && empty($dateString))
+        {
+            $tab=InvoicePayment::where('store_id',$this->sdc->storeID())
+                             ->when($invoice_id, function ($query) use ($invoice_id) {
+                                    return $query->where('invoice_id','=', $invoice_id);
+                             })
+                             ->when($tender_id, function ($query) use ($tender_id) {
+                                    return $query->where('tender_id','=', $tender_id);
+                             })
+                             ->when($customer_id, function ($query) use ($customer_id) {
+                                    return $query->where('customer_id','=', $customer_id);
+                             })
+                             ->when($dateString, function ($query) use ($dateString) {
+                                    return $query->whereRaw($dateString);
+                             })
+                             ->orderBy("id","DESC")
+                             ->take(100)
+                             ->get();
+        }
+        else
+        {
+            $tab=InvoicePayment::where('store_id',$this->sdc->storeID())
                              ->when($invoice_id, function ($query) use ($invoice_id) {
                                     return $query->where('invoice_id','=', $invoice_id);
                              })
@@ -265,6 +286,9 @@ class TenderController extends Controller
                              })
                              ->orderBy("id","DESC")
                              ->get();
+        }
+
+        
          //dd($tab);      
         $tab_customer=Customer::where('store_id',$this->sdc->storeID())->get();            
         $tab_tender=Tender::whereRaw("store_id='".$this->sdc->storeID()."' OR store_id='0'")->get();            

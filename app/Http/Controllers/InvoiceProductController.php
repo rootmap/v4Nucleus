@@ -66,8 +66,38 @@ class InvoiceProductController extends Controller
         return response()->json($cart);
     }
 
+    public function partialRepairPOS(Request $request, $repair_id=0)
+    {
+        $data=InStoreRepair::leftjoin('invoices','in_store_repairs.invoice_id','=','invoices.invoice_id')
+                            ->select('in_store_repairs.*','invoices.invoice_status')
+                            ->where('in_store_repairs.id',$repair_id)
+                            ->first();
+
+        if($data->payment_status=="Partial" && $data->invoice_status=="Paid")
+        {
+            \DB::table('in_store_repairs')->where('id',$repair_id)->update(['payment_status'=>'Paid']);
+
+            return redirect('repair/list')->with('status','Sorry, Repair payment already paid.');
+        }
+        elseif($data->payment_status=="Partial" && $data->invoice_status=="Partial")
+        {
+            Session::put('addPartialPayment',1);
+            Session::put('partial_invoice',$data->invoice_id);
+            return redirect('pos')->with('status','Partial payment initiating.');
+        }
+        else
+        {
+            return redirect('repair/list')->with('error','Failed, Something went wrong, Please contact with system admin.');
+        }
+
+
+        //dd($data);
+        //echo $repair_id; die();
+    }
+
     public function RepairPOS(Request $request, $repair_id=0)
     {
+        //echo 1; die();
 
         $tab_invoice=InStoreRepair::where('id',$repair_id)
                                   ->where('store_id',$this->sdc->storeID())
@@ -83,8 +113,15 @@ class InvoiceProductController extends Controller
         }
         $cart->addCustomerID($tab_invoice->customer_id);
         $cart->addCustomRepairPrice($product, $product->id,$tab_invoice->price,$repair_id);
+
+        if($cart->store_id==0)
+        {
+            $cart->addStoreID($this->sdc->storeID());
+        }
+
         $request->session()->put('Pos', $cart);
 
+        //dd($cart);
 
 
         $posData=serialize(json_encode($cart));

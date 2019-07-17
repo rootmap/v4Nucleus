@@ -36,9 +36,18 @@ class InStoreRepairController extends Controller
 
     public function index()
     {
-        $invoice=InStoreRepair::select('id','product_name','payment_status','customer_name','price','imei','invoice_id','created_at')
-                              ->where('store_id',$this->sdc->storeID())
+
+
+        //echo $this->sdc->storeID(); die();
+
+        $invoice=InStoreRepair::leftjoin('invoices','in_store_repairs.invoice_id','=','invoices.invoice_id')
+                              ->select('in_store_repairs.id','in_store_repairs.product_name','in_store_repairs.payment_status','in_store_repairs.customer_name','in_store_repairs.price','in_store_repairs.imei','in_store_repairs.invoice_id','in_store_repairs.created_at','invoices.invoice_status')
+                              ->where('in_store_repairs.store_id',$this->sdc->storeID())
+                              ->take(100)
+                              ->orderBy('in_store_repairs.id','DESC')
                               ->get();
+
+        //dd($invoice);
 
         return view('apps.pages.repair.list',compact('invoice'));
     }
@@ -414,10 +423,26 @@ class InStoreRepairController extends Controller
             $dateString="CAST(created_at as date) BETWEEN '".$start_date."' AND '".$end_date."'";
         }
 
-
-
-
-        $invoice=InStoreRepair::select('id','product_name','payment_status','customer_name','price','imei','invoice_id','created_at')
+        if(empty($invoice_id) && empty($customer_id) && empty($start_date) && empty($end_date) && empty($dateString))
+        {
+            $invoice=InStoreRepair::select('id','product_name','payment_status','customer_name','price','imei','invoice_id','created_at')
+                     ->where('store_id',$this->sdc->storeID())
+                     ->when($invoice_id, function ($query) use ($invoice_id) {
+                            return $query->where('invoice_id','=', $invoice_id);
+                     })
+                     ->when($customer_id, function ($query) use ($customer_id) {
+                            return $query->where('customer_id','=', $customer_id);
+                     })
+                     ->when($dateString, function ($query) use ($dateString) {
+                            return $query->whereRaw($dateString);
+                     })
+                     ->orderBy('id','DESC')
+                     ->take(100)
+                     ->get();
+        }
+        else
+        {
+            $invoice=InStoreRepair::select('id','product_name','payment_status','customer_name','price','imei','invoice_id','created_at')
                      ->where('store_id',$this->sdc->storeID())
                      ->when($invoice_id, function ($query) use ($invoice_id) {
                             return $query->where('invoice_id','=', $invoice_id);
@@ -429,6 +454,10 @@ class InStoreRepairController extends Controller
                             return $query->whereRaw($dateString);
                      })
                      ->get();
+        }
+
+
+        
                      //->toSql();
 
         //dd($tender_id);              
@@ -1243,9 +1272,13 @@ class InStoreRepairController extends Controller
         if(!empty($repair_id))
         {
 
-            $tab_invoice=InStoreRepair::where('id',$repair_id)
-                                      ->where('store_id',$this->sdc->storeID())
+            $tab_invoice=InStoreRepair::leftjoin('invoices','in_store_repairs.invoice_id','=','invoices.invoice_id')
+                                      ->select('in_store_repairs.*','invoices.invoice_status')
+                                      ->where('in_store_repairs.id',$repair_id)
+                                      ->where('in_store_repairs.store_id',$this->sdc->storeID())
                                       ->first();
+
+            $invoice_status=$tab_invoice->invoice_status;
 
             if(!isset($tab_invoice))
             {
@@ -1571,11 +1604,19 @@ class InStoreRepairController extends Controller
 
                 if (strtolower($pmt_status) == "paid") {
                     $color = "#09f;";
-                } elseif ($pmt_status == "Partial") {
+                    $html .= "<tr><td align='center' style='color:" . $color . "'><h1 style='width:60%; font-size:100px; display:block; margin-left:auto; margin-right:auto; border:3px " . $color . " solid;'>Paid</h1></td></tr>";
+                } elseif ($pmt_status == "Partial" && $invoice_status!="Paid") {
                     $color = "#FF8C00;";
+                    $html .= "<tr><td align='center' style='color:" . $color . "'><h1 style='width:60%; font-size:100px; display:block; margin-left:auto; margin-right:auto; border:3px " . $color . " solid;'>" . $pmt_status . "</h1></td></tr>";
+                } elseif ($pmt_status == "Partial" && $invoice_status=="Paid") {
+                    $color = "#09f;";
+                    $html .= "<tr><td align='center' style='color:" . $color . "'><h1 style='width:60%; font-size:100px; display:block; margin-left:auto; margin-right:auto; border:3px " . $color . " solid;'>Paid</h1></td></tr>";
                 } else {
                     $color = "#f00";
-                } $html .= "<tr><td align='center' style='color:" . $color . "'><h1 style='width:60%; font-size:100px; display:block; margin-left:auto; margin-right:auto; border:3px " . $color . " solid;'>" . $pmt_status . "</h1></td></tr>";
+                    $html .= "<tr><td align='center' style='color:" . $color . "'><h1 style='width:60%; font-size:100px; display:block; margin-left:auto; margin-right:auto; border:3px " . $color . " solid;'>" . $pmt_status . "</h1></td></tr>";
+                } 
+
+
 
                 $html .= "</tbody></table>";
 
@@ -1605,7 +1646,11 @@ class InStoreRepairController extends Controller
     public function show(InStoreRepair $inStoreRepair,$repair_id=0)
     {
         $ticketAsset=\DB::table('repair_ticket_assets')->where('asset_type','repair')->where('store_id',$this->sdc->storeID())->get();
-        $data=InStoreRepair::find($repair_id);
+        $data=InStoreRepair::leftjoin('invoices','in_store_repairs.invoice_id','=','invoices.invoice_id')
+                            ->select('in_store_repairs.*','invoices.invoice_status')
+                            ->where('in_store_repairs.id',$repair_id)
+                            ->first();
+
         $customer=Customer::find($data->customer_id);
         return view('apps.pages.repair.view',compact('data','customer','ticketAsset'));
         //dd($data);
@@ -1889,9 +1934,29 @@ class InStoreRepairController extends Controller
         }
 
 
-
-
-        $invoice=InStoreRepair::select('id','product_name','payment_status','customer_name','price','imei','invoice_id','created_at','lcd_status')
+        if(empty($invoice_id) && empty($customer_id) && empty($lcd_status) && empty($dateString))
+        {
+            $invoice=InStoreRepair::select('id','product_name','payment_status','customer_name','price','imei','invoice_id','created_at','lcd_status')
+                     ->where('store_id',$this->sdc->storeID())
+                     ->when($invoice_id, function ($query) use ($invoice_id) {
+                            return $query->where('invoice_id','=', $invoice_id);
+                     })
+                     ->when($customer_id, function ($query) use ($customer_id) {
+                            return $query->where('customer_id','=', $customer_id);
+                     })
+                     ->when($lcd_status, function ($query) use ($lcd_status) {
+                            return $query->where('lcd_status','=', $lcd_status);
+                     })
+                     ->when($dateString, function ($query) use ($dateString) {
+                            return $query->whereRaw($dateString);
+                     })
+                     ->orderBy('id','DESC')
+                     ->take(100)
+                     ->get();
+        }
+        else
+        {
+            $invoice=InStoreRepair::select('id','product_name','payment_status','customer_name','price','imei','invoice_id','created_at','lcd_status')
                      ->where('store_id',$this->sdc->storeID())
                      ->when($invoice_id, function ($query) use ($invoice_id) {
                             return $query->where('invoice_id','=', $invoice_id);
@@ -1906,6 +1971,9 @@ class InStoreRepairController extends Controller
                             return $query->whereRaw($dateString);
                      })
                      ->get();
+        }
+
+        
                      //->toSql();
 
         //dd($tender_id);              
@@ -2141,9 +2209,27 @@ class InStoreRepairController extends Controller
         }
 
 
-
-
-        $invoice=InStoreRepair::select('id','product_name','payment_status','customer_name','price','imei','invoice_id','created_at','salvage_part')
+        if(empty($invoice_id) && empty($customer_id) && empty($dateString))
+        {
+            $invoice=InStoreRepair::select('id','product_name','payment_status','customer_name','price','imei','invoice_id','created_at','salvage_part')
+                     ->where('store_id',$this->sdc->storeID())
+                     ->where('salvage_part','on')
+                     ->when($invoice_id, function ($query) use ($invoice_id) {
+                            return $query->where('invoice_id','=', $invoice_id);
+                     })
+                     ->when($customer_id, function ($query) use ($customer_id) {
+                            return $query->where('customer_id','=', $customer_id);
+                     })
+                     ->when($dateString, function ($query) use ($dateString) {
+                            return $query->whereRaw($dateString);
+                     })
+                     ->orderBy('id','DESC')
+                     ->take(100)
+                     ->get();
+        }
+        else
+        {
+            $invoice=InStoreRepair::select('id','product_name','payment_status','customer_name','price','imei','invoice_id','created_at','salvage_part')
                      ->where('store_id',$this->sdc->storeID())
                      ->where('salvage_part','on')
                      ->when($invoice_id, function ($query) use ($invoice_id) {
@@ -2156,6 +2242,9 @@ class InStoreRepairController extends Controller
                             return $query->whereRaw($dateString);
                      })
                      ->get();
+        }
+
+        
                      //->toSql();
 
         //dd($tender_id);              

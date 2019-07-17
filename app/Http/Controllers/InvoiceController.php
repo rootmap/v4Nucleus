@@ -79,6 +79,29 @@ class InvoiceController extends Controller
         $this->authorizenet = new AuthorizeNetPaymentController(); 
     }
 
+    public function salesPartialFromSalesReport(Request $request,$sales_id=0)
+    {
+        $inv=Invoice::where('invoice_id',$sales_id)->first();
+        //$inv->created_at
+        if($inv->invoice_status=="Partial")
+        {
+            $total_tax_amount=$inv->total_tax;
+            $total_due_amount=$inv->due_amount;
+
+            if($total_tax_amount==$total_due_amount)
+            {
+                \DB::table('invoices')->where('invoice_id',$sales_id)->update(['invoice_status'=>'Paid']);
+                return redirect('sales/report')->with('status','Sorry, There was problem with invoice, Invoice is already paid.');
+            }
+
+        }
+        //dd($inv);
+        //echo $sales_id; die();
+        Session::put('partial_invoice',$sales_id);
+        Session::put('addPartialPayment',1);
+        return redirect(url('pos'));
+    }
+
     public function salesPartialAdd(Request $request)
     {
         /*$tab=\DB::table('menu_pages')->orderBy('id','DESC')->get();
@@ -502,9 +525,23 @@ class InvoiceController extends Controller
         }
 
 
-
-
-        $invoice=Payout::select('id','cashier_id','cashier_name','amount','negative_amount','reason','created_at')
+        if(empty($cashier_id) && empty($dateString))
+        {
+            $invoice=Payout::select('id','cashier_id','cashier_name','amount','negative_amount','reason','created_at')
+                     ->where('store_id',$this->sdc->storeID())
+                     ->when($cashier_id, function ($query) use ($cashier_id) {
+                            return $query->where('cashier_id','=', $cashier_id);
+                     })
+                     ->when($dateString, function ($query) use ($dateString) {
+                            return $query->whereRaw($dateString);
+                     })
+                     ->orderBy('id','DESC')
+                     ->take(100)
+                     ->get();
+        }
+        else
+        {
+            $invoice=Payout::select('id','cashier_id','cashier_name','amount','negative_amount','reason','created_at')
                      ->where('store_id',$this->sdc->storeID())
                      ->when($cashier_id, function ($query) use ($cashier_id) {
                             return $query->where('cashier_id','=', $cashier_id);
@@ -513,6 +550,9 @@ class InvoiceController extends Controller
                             return $query->whereRaw($dateString);
                      })
                      ->get();
+        }
+
+        
                      //->toSql();
 
         //dd($tender_id);              
@@ -2904,10 +2944,31 @@ class InvoiceController extends Controller
         return response()->json($session_id);
     }  
 
+    private function genarateDefaultCustomer()
+    {
+        $chkCus=Customer::where('store_id',$this->sdc->storeID())->where('name','Default Customer')->count();
+        if($chkCus==0)
+        {
+            $tab_customer=new Customer;
+            $tab_customer->name="Default Customer";
+            $tab_customer->store_id=$this->sdc->storeID();
+            $tab_customer->phone="00000000000";
+            $tab_customer->email="nocustomer".$this->sdc->storeID()."@nucleuspos.com";
+            $tab_customer->created_by=\Auth::user()->id;
+            $tab_customer->save();
+        }
+
+        $cus=Customer::where('store_id',$this->sdc->storeID())->where('name','Default Customer')->first();
+
+        return $cus->id;
+    }
+
     public function pos(Request $request)
     {
         
         \DB::statement("call defaultTicketNRepairCreate('".$this->sdc->UserID()."','".$this->sdc->storeID()."')");
+
+        $defualtCustomer=$this->genarateDefaultCustomer();
 
         $this->getSalesCartTokenID();
         $filter=$this->GenaratePageDataFilter();
@@ -2927,6 +2988,7 @@ class InvoiceController extends Controller
         {
             $Ncart = new Pos($Cart);
             $Ncart->genarateInvoiceID();
+            $Ncart->addCustomerID($defualtCustomer);
             Session::put('Pos', $Ncart);
             $Cart = $request->session()->has('Pos') ? $request->session()->get('Pos') : null;
         }
@@ -5002,7 +5064,7 @@ class InvoiceController extends Controller
     {
        //echo "<pre>";
        $cart = Session::has('Pos') ? Session::get('Pos') : null;
-       //dd($cart->items);
+       //dd($cart);
 
 
        $countItems=count($cart->items);
@@ -5028,7 +5090,7 @@ class InvoiceController extends Controller
        $ivP="Pending";
        $DFGinvoicePaymentStatus=$cart->paymentMethodID;
 
-       if(!empty($DFGinvoicePaymentStatus))
+        if(!empty($DFGinvoicePaymentStatus))
         {
             //echo $paid_cart."    ".$totalPrice_cart; die();
             if($paid_cart>$totalPrice_cart)
@@ -5317,6 +5379,8 @@ class InvoiceController extends Controller
             $taxAmount=(($total_amount_invoice*$cart->TaxRate)/100);
             $total_amount_invoice-=$discount_total;
             $total_amount_invoice+=$taxAmount;
+
+            //dd($totalPrice_cart);
 
             $sqlTender=Tender::find($cart->paymentMethodID);
             $tender_name="";
@@ -5611,7 +5675,30 @@ class InvoiceController extends Controller
             $dateString="CAST(lsp_invoices.created_at as date) BETWEEN '".$start_date."' AND '".$end_date."'";
         }
 
-        $tab=$invoice::Leftjoin('customers','invoices.customer_id','=','customers.id')
+        if(empty($invoice_id) && empty($invoice_status) && empty($customer_id) && empty($dateString))
+        {
+            $tab=$invoice::Leftjoin('customers','invoices.customer_id','=','customers.id')
+                     ->select('invoices.*','customers.name as customer_name')
+                     ->where('invoices.store_id',$this->sdc->storeID())
+                     ->when($invoice_id, function ($query) use ($invoice_id) {
+                            return $query->where('invoices.invoice_id','=', $invoice_id);
+                     })
+                     ->when($invoice_status, function ($query) use ($invoice_status) {
+                            return $query->where('invoices.invoice_status','=', $invoice_status);
+                     })
+                     ->when($customer_id, function ($query) use ($customer_id) {
+                            return $query->where('invoices.customer_id','=', $customer_id);
+                     })
+                     ->when($dateString, function ($query) use ($dateString) {
+                            return $query->whereRaw($dateString);
+                     })
+                     ->orderBy("invoices.id","DESC")
+                     ->take(100)
+                     ->get();
+        }
+        else
+        {
+            $tab=$invoice::Leftjoin('customers','invoices.customer_id','=','customers.id')
                      ->select('invoices.*','customers.name as customer_name')
                      ->where('invoices.store_id',$this->sdc->storeID())
                      ->when($invoice_id, function ($query) use ($invoice_id) {
@@ -5628,6 +5715,9 @@ class InvoiceController extends Controller
                      })
                      ->orderBy("invoices.id","DESC")
                      ->get();
+        }
+
+        
          //dd($tab);      
         $tab_customer=Customer::where('store_id',$this->sdc->storeID())->get();            
         return view('apps.pages.sales.list',
@@ -5826,6 +5916,7 @@ class InvoiceController extends Controller
                      ->where('invoices.store_id',$this->sdc->storeID())
                      ->where('invoices.sales_return',0)
                      ->orderBy("invoices.id","DESC")
+                     ->take(100)
                      ->get();
         return view('apps.pages.sales.make-sales-return',['dataTable'=>$tab]);
     }
@@ -5873,7 +5964,25 @@ class InvoiceController extends Controller
             $dateString="CAST(created_at as date) BETWEEN '".$start_date."' AND '".$end_date."'";
         }
 
-        $tab=SalesReturn::where('store_id',$this->sdc->storeID())
+        if(empty($invoice_id) && empty($customer_id) && empty($start_date) && empty($end_date) && empty($dateString))
+        {
+            $tab=SalesReturn::where('store_id',$this->sdc->storeID())
+                         ->when($invoice_id, function ($query) use ($invoice_id) {
+                                return $query->where('invoice_id','=', $invoice_id);
+                         })
+                         ->when($customer_id, function ($query) use ($customer_id) {
+                                return $query->where('customer_id','=', $customer_id);
+                         })
+                         ->when($dateString, function ($query) use ($dateString) {
+                                return $query->whereRaw($dateString);
+                         })
+                         ->orderBy("id","DESC")
+                         ->take(100)
+                         ->get();
+        }
+        else
+        {
+            $tab=SalesReturn::where('store_id',$this->sdc->storeID())
                          ->when($invoice_id, function ($query) use ($invoice_id) {
                                 return $query->where('invoice_id','=', $invoice_id);
                          })
@@ -5885,6 +5994,9 @@ class InvoiceController extends Controller
                          })
                          ->orderBy("id","DESC")
                          ->get();
+        }
+
+        
 
         $customer=Customer::where('store_id',$this->sdc->storeID())->get();
 

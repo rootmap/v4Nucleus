@@ -29,6 +29,8 @@ class InStoreTicketController extends Controller
     {
         $invoice=InStoreTicket::select('id','product_name','customer_name','problem_name','payment_status','our_cost','retail_price','imei','invoice_id','created_at')
                               ->where('store_id',$this->sdc->storeID())
+                              ->orderBy('id','DESC')
+                              ->take(100)
                               ->get();
 
         return view('apps.pages.ticket.list',compact('invoice'));
@@ -76,10 +78,26 @@ class InStoreTicketController extends Controller
             $dateString="CAST(created_at as date) BETWEEN '".$start_date."' AND '".$end_date."'";
         }
 
-
-
-
-        $invoice=InStoreTicket::select('id','product_name','customer_name','payment_status','our_cost','retail_price','imei','invoice_id','created_at')
+        if(empty($invoice_id) && empty($customer_id) && empty($start_date) && empty($end_date) && empty($dateString))
+        {
+            $invoice=InStoreTicket::select('id','product_name','customer_name','payment_status','our_cost','retail_price','imei','invoice_id','created_at')
+                     ->where('store_id',$this->sdc->storeID())
+                     ->when($invoice_id, function ($query) use ($invoice_id) {
+                            return $query->where('invoice_id','=', $invoice_id);
+                     })
+                     ->when($customer_id, function ($query) use ($customer_id) {
+                            return $query->where('customer_id','=', $customer_id);
+                     })
+                     ->when($dateString, function ($query) use ($dateString) {
+                            return $query->whereRaw($dateString);
+                     })
+                     ->orderBy('id','DESC')
+                     ->take(100)
+                     ->get();
+        }
+        else
+        {
+            $invoice=InStoreTicket::select('id','product_name','customer_name','payment_status','our_cost','retail_price','imei','invoice_id','created_at')
                      ->where('store_id',$this->sdc->storeID())
                      ->when($invoice_id, function ($query) use ($invoice_id) {
                             return $query->where('invoice_id','=', $invoice_id);
@@ -91,6 +109,10 @@ class InStoreTicketController extends Controller
                             return $query->whereRaw($dateString);
                      })
                      ->get();
+        }
+
+
+        
                      //->toSql();
 
         //dd($tender_id);              

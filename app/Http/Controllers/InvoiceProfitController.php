@@ -62,10 +62,27 @@ class InvoiceProfitController extends Controller
             $dateString="CAST(lsp_invoices.created_at as date) BETWEEN '".$start_date."' AND '".$end_date."'";
         }
 
-
-
-
-        $invoice=Invoice::join('customers','invoices.customer_id','=','customers.id')
+        if(empty($invoice_id) && empty($customer_id) && empty($dateString))
+        {
+            $invoice=Invoice::join('customers','invoices.customer_id','=','customers.id')
+                     ->select('invoices.*','customers.name as customer_name')
+                     ->where('invoices.store_id',$this->sdc->storeID())
+                     ->when($invoice_id, function ($query) use ($invoice_id) {
+                            return $query->where('invoices.invoice_id','=', $invoice_id);
+                     })
+                     ->when($customer_id, function ($query) use ($customer_id) {
+                            return $query->where('invoices.customer_id','=', $customer_id);
+                     })
+                     ->when($dateString, function ($query) use ($dateString) {
+                            return $query->whereRaw($dateString);
+                     })
+                     ->orderBy('invoices.id','DESC')
+                     ->take(100)
+                     ->get();
+        }
+        else
+        {
+            $invoice=Invoice::join('customers','invoices.customer_id','=','customers.id')
                      ->select('invoices.*','customers.name as customer_name')
                      ->where('invoices.store_id',$this->sdc->storeID())
                      ->when($invoice_id, function ($query) use ($invoice_id) {
@@ -79,6 +96,10 @@ class InvoiceProfitController extends Controller
                      })
                      ->orderBy('invoices.id','DESC')
                      ->get();
+        }
+
+
+        
 
         $tab_customer=Customer::where('store_id',$this->sdc->storeID())->get();
    

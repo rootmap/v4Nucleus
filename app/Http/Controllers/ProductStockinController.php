@@ -28,6 +28,8 @@ class ProductStockinController extends Controller
         $tab=ProductStockin::join('products as p','product_stockins.product_id','=','p.id')
                             ->where('product_stockins.store_id',$this->sdc->storeID())
                             ->select('product_stockins.*','p.name as product_name')
+                            ->orderBy("product_stockins.id","DESC")
+                            ->take(100)
                             ->get();
 
         
@@ -291,7 +293,28 @@ class ProductStockinController extends Controller
             $dateString="CAST(lsp_product_stockin_invoices.created_at as date) BETWEEN '".$start_date."' AND '".$end_date."'";
         }
         // dd($dateString);
-        $invoice=ProductStockinInvoice::leftjoin('vendors','product_stockin_invoices.vendor_id','=','vendors.id')
+
+        if(empty($order_no) && empty($vendor_id) && empty($dateString))
+        {
+            $invoice=ProductStockinInvoice::leftjoin('vendors','product_stockin_invoices.vendor_id','=','vendors.id')
+                     ->select('product_stockin_invoices.*','vendors.name as vendor_name')
+                     ->where('product_stockin_invoices.store_id',$this->sdc->storeID())
+                     ->when($order_no, function ($query) use ($order_no) {
+                            return $query->where('product_stockin_invoices.order_no','=', $order_no);
+                     })
+                     ->when($vendor_id, function ($query) use ($vendor_id) {
+                            return $query->where('product_stockin_invoices.vendor_id','=', $vendor_id);
+                     })
+                     ->when($dateString, function ($query) use ($dateString) {
+                            return $query->whereRaw($dateString);
+                     })
+                     ->orderBy('product_stockin_invoices.id','DESC')
+                     ->take(100)
+                     ->get();
+        }
+        else
+        {
+            $invoice=ProductStockinInvoice::leftjoin('vendors','product_stockin_invoices.vendor_id','=','vendors.id')
                      ->select('product_stockin_invoices.*','vendors.name as vendor_name')
                      ->where('product_stockin_invoices.store_id',$this->sdc->storeID())
                      ->when($order_no, function ($query) use ($order_no) {
@@ -304,6 +327,9 @@ class ProductStockinController extends Controller
                             return $query->whereRaw($dateString);
                      })
                      ->get();
+        }
+
+        
         // dd($invoice);
 
         $tab_vendor=Vendor::where('store_id',$this->sdc->storeID())->get();

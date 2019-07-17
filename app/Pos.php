@@ -18,11 +18,12 @@ class Pos {
     public $discountTotal =0;
     public $paymentMethodID =0;
     public $customerID =0;
-    public $AllowCustomerPayBill =0;
+    public $AllowCustomerPayBill=0;
+    public $test_env='';
 
     public function __construct($oldCart) {
 
-
+        $this->genarateINewTax();
 
         if ($oldCart) {
 
@@ -206,13 +207,16 @@ class Pos {
                 $this->TaxRate=20;
             }*/
 
+            $this->test_env=$this->TaxRate;
+
             $this->totalTax = 0;
             $totalPrice=0;
             foreach($this->items as $index=>$itm):
                 $storeditem = $this->items[$itm['item_id']];
-                $storeditem['tax'] = (($storeditem['price'] * $this->TaxRate)/100);
+                 $calcTx= (($storeditem['price'] * $this->TaxRate)/100);
+                 $storeditem['tax']=$calcTx;
                 $this->items[$itm['item_id']]=$storeditem;
-                $this->totalTax += $storeditem['tax'];
+                $this->totalTax += $calcTx;
                 $totalPrice+=$storeditem['price'];
             endforeach;
 
@@ -264,6 +268,12 @@ class Pos {
         $this->customerID = $customerID;
         $this->calculateTax();
     } 
+
+    public function addStoreID($store_id)
+    {
+        $this->store_id = $store_id;
+        $this->calculateTax();
+    }
 
     public function AllowCustomerPayBill($AllowCustomerPayBill=0)
     {

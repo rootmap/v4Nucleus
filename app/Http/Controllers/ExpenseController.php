@@ -22,7 +22,7 @@ class ExpenseController extends Controller
     public function index()
     {
         $ExpenseHead=ExpenseHead::where('store_id',$this->sdc->storeID())->get();
-        $tab=Expense::where('store_id',$this->sdc->storeID())->get();
+        $tab=Expense::where('store_id',$this->sdc->storeID())->orderBy('id','DESC')->take(100)->get();
         return view('apps.pages.expense.expense',['dataTable'=>$tab,'expenseHead'=>$ExpenseHead]);
     }
     
@@ -166,9 +166,22 @@ class ExpenseController extends Controller
         }
 
 
-
-
-        $invoice=Expense::where('store_id',$this->sdc->storeID())
+        if(empty($expense_id) && empty($start_date) && empty($end_date) && empty($dateString))
+        {
+            $invoice=Expense::where('store_id',$this->sdc->storeID())
+                         ->when($expense_id, function ($query) use ($expense_id) {
+                                return $query->where('expense_id','=', $expense_id);
+                         })
+                         ->when($dateString, function ($query) use ($dateString) {
+                                return $query->whereRaw($dateString);
+                         })
+                         ->take(100)
+                         ->orderBy('id','DESC')
+                         ->get();
+        }
+        else
+        {
+            $invoice=Expense::where('store_id',$this->sdc->storeID())
                          ->when($expense_id, function ($query) use ($expense_id) {
                                 return $query->where('expense_id','=', $expense_id);
                          })
@@ -176,6 +189,9 @@ class ExpenseController extends Controller
                                 return $query->whereRaw($dateString);
                          })
                          ->get();
+        }
+
+        
 
         return $invoice;
     }

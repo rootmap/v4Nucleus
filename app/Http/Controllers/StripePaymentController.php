@@ -139,7 +139,30 @@ class StripePaymentController extends Controller
         }
         $code =StripeTransactionHistory::select('card_number')->groupBy('card_number')->get();
         // dd($code);
-        $tab=StripeTransactionHistory::select('stripe_transaction_histories.*')
+
+        if(empty($invoice_id) && empty($start_date) && empty($end_date) && empty($card_number) && empty($dateString))
+        {
+            $tab=StripeTransactionHistory::select('stripe_transaction_histories.*')
+                     ->where('stripe_transaction_histories.store_id',$this->sdc->storeID())
+                     ->when($invoice_id, function ($query) use ($invoice_id) {
+                            return $query->where('stripe_transaction_histories.invoice_id','=', $invoice_id);
+                     })
+                     // ->when($card_number, function ($query) use ($card_number) {
+                     //        return $query->where(SUBSTRING('authorize_net_payment_histories.card_number',-4),'=', $card_number);
+                     // })
+                     ->when($card_number, function ($query) use ($card_number) {
+                            return $query->where(DB::raw('substr(card_number,-4)'),'=',$card_number);
+                     })
+                     ->when($dateString, function ($query) use ($dateString) {
+                            return $query->whereRaw($dateString);
+                     })
+                     ->orderBy("stripe_transaction_histories.id","DESC")
+                     ->take(100)
+                     ->get();
+        }
+        else
+        {
+            $tab=StripeTransactionHistory::select('stripe_transaction_histories.*')
                      ->where('stripe_transaction_histories.store_id',$this->sdc->storeID())
                      ->when($invoice_id, function ($query) use ($invoice_id) {
                             return $query->where('stripe_transaction_histories.invoice_id','=', $invoice_id);
@@ -155,6 +178,12 @@ class StripePaymentController extends Controller
                      })
                      ->orderBy("stripe_transaction_histories.id","DESC")
                      ->get();
+        }
+
+
+        
+
+
          // dd($tab);                 
         return view('apps.pages.report.card-payment-history-stripe',
             [

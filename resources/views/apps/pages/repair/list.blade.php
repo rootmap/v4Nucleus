@@ -4,7 +4,6 @@
 <section id="form-action-layouts">
 <?php 
     $userguideInit=StaticDataController::userguideInit();
-    //dd($dataMenuAssigned);
 ?>
 <!-- Both borders end-->
 <div class="row">
@@ -50,10 +49,12 @@
 	                                <td>{{$inv->product_name}}</td>
 	                                <td>{{number_format($inv->price,2)}}</td>
 	                                <td>
-	                                	@if($inv->payment_status=="Pending")
+	                                	@if($inv->payment_status=="Pending" && $inv->invoice_status!="Paid")
 	                                		<a href="{{url('pos/repair/'.$inv->id)}}" class="btn btn-green"> {{number_format($inv->price,2)}} To POS</i> </a>
-	                                	@elseif($inv->payment_status=="Partial")
+	                                	@elseif($inv->payment_status=="Partial" && $inv->invoice_status!="Paid")
 	                                		<a href="{{url('pos/repair/partial/'.$inv->id)}}" class="btn btn-green btn-darken-4"> PAY PARTIAL</i> </a>
+	                                	@elseif($inv->payment_status=="Partial" && $inv->invoice_status=="Paid")
+	                                		Paid
 	                                	@else
 	                                		Paid
 	                                	@endif

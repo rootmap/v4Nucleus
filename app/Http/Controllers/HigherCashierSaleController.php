@@ -56,10 +56,22 @@ class HigherCashierSaleController extends Controller
             $dateString="CAST(created_at as date) BETWEEN '".$start_date."' AND '".$end_date."'";
         }
 
-
-
-
-        $invoice=HigherCashierSale::where('store_id',$this->sdc->storeID())
+        if(empty($cashier_id) && empty($dateString))
+        {
+            $invoice=HigherCashierSale::where('store_id',$this->sdc->storeID())
+                     ->when($cashier_id, function ($query) use ($cashier_id) {
+                            return $query->where('cashier_id','=', $cashier_id);
+                     })
+                     ->when($dateString, function ($query) use ($dateString) {
+                            return $query->whereRaw($dateString);
+                     })
+                     ->orderBy('id','DESC')
+                     ->take(100)
+                     ->get();
+        }
+        else
+        {
+            $invoice=HigherCashierSale::where('store_id',$this->sdc->storeID())
                      ->when($cashier_id, function ($query) use ($cashier_id) {
                             return $query->where('cashier_id','=', $cashier_id);
                      })
@@ -67,6 +79,9 @@ class HigherCashierSaleController extends Controller
                             return $query->whereRaw($dateString);
                      })
                      ->get();
+        }
+
+        
                      //->toSql();
 
         //dd($tender_id);              
