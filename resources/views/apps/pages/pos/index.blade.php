@@ -569,6 +569,16 @@
         $("select[name=sales_return_customer_id]").html(fff);
         $("select[name=buyback_customer_id]").html(fff);
         //$("select[name=partialpay_customer_id]").html(fff);
+
+        $("select[name=sales_return_customer_id]").select2({
+             dropdownParent: $("#salesReturn")
+        });
+        
+        $("select[name=sales_return_sales_invoice_id]").select2({
+             dropdownParent: $("#salesReturn")
+        });
+
+
         ff="";
         fff="";
     }
@@ -630,8 +640,9 @@
                 var totalTax=parseFloat(data.totalTax).toFixed(2);
                 var opening_amount=parseFloat(data.opening_amount).toFixed(2);
                 var totalPayout=parseFloat(data.totalPayout).toFixed(2);
+                var totalbuyback=parseFloat(data.buyback).toFixed(2);
 
-                var currectStoreTotal=(salesTotal-0)+(opening_amount-0)+(totalPayout-0);
+                var currectStoreTotal=(salesTotal-0)+(opening_amount-0)+(totalPayout-0)-totalbuyback;
 
                     currectStoreTotal=parseFloat(currectStoreTotal).toFixed(2);
 
@@ -640,6 +651,7 @@
                 $("#storeCloseOpeningAmount").html(opening_amount);
                 $("#storeCloseTaxAmount").html(totalTax);
                 $("#totalPayout").html(totalPayout);
+                $("#buybackStoreClosingAmount").html(totalbuyback);
 
                 //storeCloseTableTenderList
                 var salesDataTendr=data.totalSalesTender;

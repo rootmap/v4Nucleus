@@ -54,6 +54,81 @@
 		}
 	</script>
 	@endif
+
+	@if(isset($buyback_customer))
+	<script type="text/javascript">
+	
+
+	$("select[name=customer_id]").change(function(){
+        var customerID=$.trim($(this).val());
+        console.log(customerID);
+        if(customerID.length==0)
+        {
+            alert("Please select a customer.");
+            return false;
+        }
+        else if(customerID==0)
+        {
+            $("#NewCustomerDash").modal('show');
+            return false;
+        }
+    });
+
+    $(".save-new-customer").click(function(){
+
+                    var name=$.trim($("input[name=new_customer_name]").val());
+                    var phone=$.trim($("input[name=new_customer_phone]").val());
+                    var email=$.trim($("input[name=new_customer_email]").val());
+                    var address=$.trim($("input[name=new_customer_address]").val());
+                    //console.log(name,phone,email,address);
+                    if(name.length==0)
+                    {
+                        alert("Please select a customer Name.");
+                        return false;
+                    }
+                    else if(phone.length==0)
+                    {
+                        alert("Please select a customer Phone Number.");
+                        return false;
+                    }
+                    /*else if(email.length==0)
+                    {
+                        alert("Please select a customer Email.");
+                        return false;
+                    }
+                    else if(address.length==0)
+                    {
+                        alert("Please select a customer Address.");
+                        return false;
+                    }*/
+                    
+                    $(".save-new-customer-parent").html(" Processing please wait.....");
+
+                    //------------------------Ajax Customer Start-------------------------//
+                    var AddNewCustomerUrl="{{url('customer/pos/ajax/add')}}";
+                    $.ajax({
+                        'async': false,
+                        'type': "POST",
+                        'global': false,
+                        'dataType': 'json',
+                        'url': AddNewCustomerUrl,
+                        'data': {'name':name,'phone':phone,'email':email,'address':address,'_token':"{{csrf_token()}}"},
+                        'success': function (data) {
+                            $("select[name=customer_id]").append('<option value="'+data+'">'+name+'</option>');
+                            $("select[name=customer_id] option[value='"+data+"']").prop("selected",true);
+
+                            console.log("Saved New Customer : "+data);
+                            $("#NewCustomerDash").modal('hide');
+
+                        }
+                    });
+                    //------------------------Ajax Customer End---------------------------//
+                });
+
+
+    </script>
+    @endif
+
 	
 	@if(isset($JDataTable))
     <script src="{{url('theme/app-assets/vendors/js/tables/jquery.dataTables.min.js')}}" type="text/javascript"></script>
@@ -413,6 +488,7 @@
 	                    $("#totalPayout").html(data.payout);
 	                    $("#storeCloseTaxAmount").html(data.tax);
 	                    $("#currectStoreTotal").html(data.netTotal);
+	                    $("#buybackStoreClosingAmount").html(data.buyback);
 
 	                    var tenderData=data.tnderData;
 

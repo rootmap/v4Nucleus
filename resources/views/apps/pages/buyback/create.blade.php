@@ -43,6 +43,7 @@
 												<label for="userinput1">Customer <span class="text-danger">*</span></label>
 												<select style="width: 90%;" name="customer_id" class="select2 form-control"> 
 													<option value="">Select Customer</option>
+													<option value="0">Create New Customer</option>
 													@if(isset($productData))
 														@foreach($productData as $pro)
 														<option 
@@ -230,8 +231,8 @@
 	</div>
 <!-- Both borders end -->
 
-
+	@include('apps.include.modal.new-customer')
 </section>
 @endsection
 
-@include('apps.include.datatable',['selectTwo'=>1,'dateDrop'=>1,'testJsonApi'=>1])
+@include('apps.include.datatable',['selectTwo'=>1,'dateDrop'=>1,'buyback_customer'=>1])

@@ -27,6 +27,12 @@
                     });
 
                     $("select[name=warranty_sales_invoice_id]").html(ff);
+
+                    $("select[name=warranty_sales_invoice_id]").select2({
+                         dropdownParent: $("#warranty")
+                    });
+
+
                 }
             });
             //------------------------Ajax Customer End---------------------------//
@@ -70,6 +76,11 @@
 
                         $("select[name=warranty_ex_product_id]").html(ff);
 
+                        $("select[name=warranty_ex_product_id]").select2({
+                             dropdownParent: $("#warranty")
+                        });
+
+
                         ff="";
 
                         var fff="<option value=''>Select A New Product</option>";
@@ -79,6 +90,12 @@
                         });
 
                         $("select[name=warranty_new_product_id]").html(fff);
+
+                        $("select[name=warranty_new_product_id]").select2({
+                             dropdownParent: $("#warranty")
+                        });
+
+                        //
 
                     }
                     else

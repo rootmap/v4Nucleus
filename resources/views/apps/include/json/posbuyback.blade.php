@@ -3,6 +3,9 @@
         $(".buybackpull").click(function(){
             $("#buyback").modal("show");
 
+            $("select[name=buyback_customer_id]").select2({
+                 dropdownParent: $("#buyback")
+            });
 
 
         });

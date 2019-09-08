@@ -53,6 +53,7 @@ use App\InStoreRepairPrice;
 
 use Stripe;
 use App\StripeStoreSetting;
+use App\Buyback;
 use App\StripeTransactionHistory;
 
 class InvoiceController extends Controller
@@ -1943,15 +1944,19 @@ class InvoiceController extends Controller
                             ->whereRaw("created_at >= CAST('".$getStoreDateTime."' as datetime) AND  created_at <=CAST('".$getStoreCloseDateTime."' as datetime)")
                             ->sum('negative_amount');
 
+            $totalBuyback=Buyback::where('store_id',$this->sdc->storeID())
+                            ->whereRaw("created_at >= CAST('".$getStoreDateTime."' as datetime) AND  created_at <=CAST('".$getStoreCloseDateTime."' as datetime)")
+                            ->sum('price');
+
             //dd($totalPayoutMin);
 
             $totalPayout=$totalPayoutPlus-$totalPayoutMin;
 
            // dd($totalSalesTender);
 
-            $array=array('status'=>1,'opening_amount'=>$opening_amount,'opening_time'=>date('d/m/Y',strtotime($getStoreDateTime)),'salesTotal'=>$totalSales,'totalSalesTender'=>$totalSalesTender,'totalTax'=>$totalTax);
+            $array=array('status'=>1,'opening_amount'=>$opening_amount,'opening_time'=>date('d/m/Y',strtotime($getStoreDateTime)),'salesTotal'=>$totalSales,'totalSalesTender'=>$totalSalesTender,'totalTax'=>$totalTax,'buyback'=>$totalBuyback);
 
-            $closing_amount=$totalSales+$opening_amount+$totalPayout;
+            $closing_amount=$totalSales+$opening_amount+$totalPayout-$totalBuyback;
 
             $userFullName=\Auth::user()->name;
 
@@ -2022,10 +2027,14 @@ class InvoiceController extends Controller
                         ->whereRaw("created_at >= CAST('".$getStoreDateTime."' as datetime) AND  created_at <=CAST('".$getStoreCloseDateTime."' as datetime)")
                         ->sum('negative_amount');
 
-        $totalPayout=$totalPayoutPlus-$totalPayoutMin;
-        $array=array('status'=>1,'opening_amount'=>$opening_amount,'opening_time'=>date('d/m/Y',strtotime($getStoreDateTime)),'salesTotal'=>$totalSales,'totalSalesTender'=>$totalSalesTender,'totalTax'=>$totalTax);
+        $totalBuyback=Buyback::where('store_id',$this->sdc->storeID())
+                            ->whereRaw("created_at >= CAST('".$getStoreDateTime."' as datetime) AND  created_at <=CAST('".$getStoreCloseDateTime."' as datetime)")
+                            ->sum('price');
 
-        $closing_amount=$totalSales+$opening_amount+$totalPayout;
+        $totalPayout=$totalPayoutPlus-$totalPayoutMin;
+        $array=array('status'=>1,'opening_amount'=>$opening_amount,'opening_time'=>date('d/m/Y',strtotime($getStoreDateTime)),'salesTotal'=>$totalSales,'totalSalesTender'=>$totalSalesTender,'totalTax'=>$totalTax,'buyback'=>$totalBuyback);
+
+        $closing_amount=$totalSales+$opening_amount+$totalPayout-$totalBuyback;
 
         $userFullName=$closeStoreData->cashier_name;
 
@@ -2149,6 +2158,11 @@ class InvoiceController extends Controller
                       <td align="left">$<span id="storeCloseTaxAmount">';
                       $html .=number_format($totalTax,2);
                       $html .='</span></td>
+                  </tr><tr>
+                      <td align="left">Buyback (-)  :  </td>
+                      <td align="left">$<span id="buybackStoreClosingAmount">';
+                      $html .=number_format($totalBuyback,2);
+                      $html .='</span></td>
                   </tr>
                   <tr>
                       <td colspan="2"><div style="background:rgba(51,51,51,1); display:block; height:1px;"></div> </td>
@@ -2245,10 +2259,16 @@ class InvoiceController extends Controller
                         ->whereRaw("created_at >= CAST('".$getStoreDateTime."' as datetime) AND  created_at <=CAST('".$getStoreCloseDateTime."' as datetime)")
                         ->sum('negative_amount');
 
+        $totalBuyback=Buyback::where('store_id',$this->sdc->storeID())
+                            ->whereRaw("created_at >= CAST('".$getStoreDateTime."' as datetime) AND  created_at <=CAST('".$getStoreCloseDateTime."' as datetime)")
+                            ->sum('price');
+
         $totalPayout=$totalPayoutPlus-$totalPayoutMin;
         $array=array('status'=>1,'opening_amount'=>$opening_amount,'opening_time'=>date('d/m/Y',strtotime($getStoreDateTime)),'salesTotal'=>$totalSales,'totalSalesTender'=>$totalSalesTender,'totalTax'=>$totalTax);
 
-        $closing_amount=$totalSales+$opening_amount+$totalPayout;
+
+
+        $closing_amount=$totalSales+$opening_amount+$totalPayout-$totalBuyback;
 
         $userFullName=$closeStoreData->cashier_name;
 
@@ -2265,6 +2285,7 @@ class InvoiceController extends Controller
             "payout"=>number_format($totalPayout,2),
             "tax"=>number_format($totalTax,2),
             "netTotal"=>number_format($closing_amount,2),
+            "buyback"=>number_format($totalBuyback,2),
             "cashier"=>$userFullName
         );
 
@@ -2317,13 +2338,18 @@ class InvoiceController extends Controller
                             ->whereRaw("created_at >= CAST('".$getStoreDateTime."' as datetime) AND  created_at <=CAST('".$getStoreCloseDateTime."' as datetime)")
                             ->sum('negative_amount');
 
+
+            $totalBuyback=Buyback::where('store_id',$this->sdc->storeID())
+                            ->whereRaw("created_at >= CAST('".$getStoreDateTime."' as datetime) AND  created_at <=CAST('".$getStoreCloseDateTime."' as datetime)")
+                            ->sum('price');
+
             //dd($totalPayoutMin);
 
             $totalPayout=$totalPayoutPlus-$totalPayoutMin;
 
 
 
-            $array=array('status'=>1,'opening_amount'=>$opening_amount,'opening_time'=>date('d/m/Y',strtotime($getStoreDateTime)),'salesTotal'=>$totalSales,'totalSalesTender'=>$totalSalesTender,'totalTax'=>$totalTax,'totalPayout'=>$totalPayout);
+            $array=array('status'=>1,'opening_amount'=>$opening_amount,'opening_time'=>date('d/m/Y',strtotime($getStoreDateTime)),'salesTotal'=>$totalSales,'totalSalesTender'=>$totalSalesTender,'totalTax'=>$totalTax,'totalPayout'=>$totalPayout,'buyback'=>$totalBuyback);
         }
         else
         {

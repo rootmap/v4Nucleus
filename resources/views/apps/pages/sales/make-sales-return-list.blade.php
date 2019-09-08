@@ -159,4 +159,4 @@
 
 @endsection
 
-@include('apps.include.datatable',['JDataTable'=>1,'selectTwo'=>1])
+@include('apps.include.datatable',['dateDrop'=>1,'JDataTable'=>1,'selectTwo'=>1])

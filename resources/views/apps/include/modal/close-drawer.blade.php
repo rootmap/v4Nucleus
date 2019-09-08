@@ -55,6 +55,10 @@
                       <td align="left">$<span id="storeCloseTaxAmount">0.00</span></td>
                   </tr>
                   <tr>
+                      <td align="left">Buyback (-)  :  </td>
+                      <td align="left">$<span id="buybackStoreClosingAmount">0.00</span></td>
+                  </tr>
+                  <tr>
                       <td colspan="2"><div style="background:rgba(51,51,51,1); display:block; height:1px;"></div> </td>
                   </tr>
                 </tbody>
