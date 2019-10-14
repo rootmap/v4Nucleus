@@ -224,6 +224,7 @@ class InvoiceController extends Controller
 
     public function getUnsavedInvoice(Request $request)
     {
+
         $sessionInvoice=SessionInvoice::where('store_id',$this->sdc->storeID())
                                       ->where('invoice_status','Not Created')
                                       ->get();
@@ -264,6 +265,8 @@ class InvoiceController extends Controller
         $sessionInvoice=$dataArray;
 
         return view('apps.pages.unsaved.list',compact('sessionInvoice'));
+
+
     }
 
     public function genarateUnsavedInvoice(Request $request,$id=0)
@@ -308,6 +311,23 @@ class InvoiceController extends Controller
         }
 
         //dd($decodePos);
+    }
+
+    public function deleteUnsavedInvoice(Request $request,$id=0){
+
+        $sessionInvoiceCount=SessionInvoice::where('store_id',$this->sdc->storeID())
+                                      ->where('id',$id)
+                                      ->count();
+        if($sessionInvoiceCount==1){
+            $sessionInvoice=SessionInvoice::where('store_id',$this->sdc->storeID())
+                                      ->where('id',$id)
+                                      ->delete();
+
+            return redirect(url('sales/unsaved/invoice'))->with('success','Unsaved invoice info deleted successfully.');
+        }else{
+            return redirect(url('sales/unsaved/invoice'))->with('error','Unsaved invoice info deletion failed.');
+        }
+        
     }
 
     public function developerStore(Request $request)

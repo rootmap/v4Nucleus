@@ -27,7 +27,7 @@
 			</div>
 			<div class="card-body collapse in">
 				<div class="table-responsive">
-					<table class="table table-striped table-bordered zero-configuration">
+					<table id="post_list" class="dataTable table table-bordered" width="100%" cellspacing="0">
 						<thead>
 							<tr>
 								<th>ID</th>
@@ -42,6 +42,9 @@
 							</tr>
 						</thead>
 						<tbody>
+							
+						</tbody>
+						{{-- <tbody>
 							@if(isset($dataTable))
 							@foreach($dataTable as $row)
 							<tr>
@@ -71,7 +74,7 @@
 								<td colspan="6">No Record Found</td>
 							</tr>
 							@endif
-						</tbody>
+						</tbody> --}}
 					</table>
 				</div>
 			</div>
@@ -84,4 +87,132 @@
 </section>
 @endsection
 
-@include('apps.include.datatable',['JDataTable'=>1])
+
+@section('css')
+	<link rel="stylesheet" type="text/css" href="{{url('theme/app-assets/vendors/css/tables/datatable/dataTables.bootstrap4.min.css')}}">
+    <style type="text/css">
+		div.dataTables_length{
+				padding-left: 10px;
+				padding-top: 15px;
+		}
+
+		.dataTables_length>label{
+			margin-bottom: 0px !important;
+			display:block; !important;
+		}
+
+		div.dataTables_filter
+		{
+			padding-right: 10px;
+		}
+
+		div.dataTables_green{
+			padding-left: 10px;
+		}
+
+		div.dataTables_paginate{
+			padding-right: 10px;
+			padding-top: 5px;
+		}
+	</style>
+	
+@endsection
+
+@section('js')
+	
+    <script src="{{url('theme/app-assets/vendors/js/tables/jquery.dataTables.min.js')}}" type="text/javascript"></script>
+    <script src="{{url('theme/app-assets/vendors/js/tables/datatable/dataTables.bootstrap4.min.js')}}" type="text/javascript"></script>
+
+    <!-- BEGIN PAGE LEVEL JS-->
+    <script src="{{url('theme/app-assets/js/scripts/tables/datatables/datatable-basic.min.js')}}" type="text/javascript"></script>
+    <!-- END PAGE LEVEL JS-->
+   <script>
+	
+	$(document).ready(function(e){
+		var customerReportLink="{{url('customer/report')}}";
+		var customerEditLink="{{url('customer/edit')}}";
+		var customerDeleteLink="{{url('customer/delete')}}";
+
+		function actionTemplate(id){
+			var actHTml='';
+			    actHTml+='<a href="'+customerReportLink+'/'+id+'" class="btn btn-green mr-1 change-action"'; 
+			    @if($userguideInit==1) 
+			    actHTml+='	data-step="2" data-intro="When you see report then click view report button."'; 
+			    @endif
+				actHTml+=' >	<i class="icon-file-o"></i> View Report	</a>';
+
+				actHTml+='<a href="'+customerEditLink+'/'+id+'" class="btn btn-green mr-1 btn-darken-2" ';
+				@if($userguideInit==1) 
+				actHTml+=' data-step="3" data-intro="When you see modify then click edit button." ';
+				@endif
+				actHTml+=' >	<i class="icon-edit"></i> </a>';
+
+				actHTml+='<a href="'+customerDeleteLink+'/'+id+'" class="btn btn-green mr-1 btn-darken-3" ';
+				@if($userguideInit==1) 
+					actHTml+='data-step="4" data-intro="When you delete report then click delete button." ';
+				@endif
+				actHTml+=' >	<i class="icon-trash"></i> </a>';
+
+				return actHTml;
+		}
+
+		function replaceNull(valH){
+			var returnHt='';
+
+			if(valH !== null && valH !== '') {
+					returnHt=valH;
+				
+				
+			}
+
+			return returnHt;
+		}
+
+		$('#post_list').dataTable({
+			"bProcessing": true,
+         	"serverSide": true,
+         	"ajax":{
+	            url :"{{url('customer/data/json')}}",
+	            headers: {
+			        'X-CSRF-TOKEN':'{{csrf_token()}}',
+
+			    },
+	            type: "POST",
+	            complete:function(data){
+	            	console.log(data.responseJSON);
+	            	var totalData=data.responseJSON;
+	            	console.log(totalData.data);
+	            	var strHTML='';
+	            	$.each(totalData.data,function(key,row){
+	            		console.log(row);
+	            		strHTML+='<tr>';
+						strHTML+='		<td>'+row.id+'</td>';
+						strHTML+='		<td>'+row.name+'</td>';
+						strHTML+='		<td>'+replaceNull(row.address)+'</td>';
+						strHTML+='		<td>'+replaceNull(row.phone)+'</td>';
+						strHTML+='		<td>'+replaceNull(row.email)+'</td>';
+						strHTML+='		<td>'+replaceNull(row.last_invoice_no)+'</td>';
+						@if(in_array('list_customer_report', $dataMenuAssigned))
+							strHTML+='		<td width="550">'+actionTemplate(row.id)+'</td>';
+						@endif
+						strHTML+='</tr>';
+	            	});
+
+	            	$("tbody").html(strHTML);
+
+	            	$('#post_list').DataTable();
+	            },
+	            initComplete: function(settings, json) {
+				    alert( 'DataTables has finished its initialisation.' );
+				  },
+	            error: function(){
+	              $("#post_list_processing").css("display","none");
+	            }
+          	}
+        });
+	});
+
+
+    </script>
+
+@endsection

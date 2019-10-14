@@ -78,6 +78,7 @@ Route::group(['middleware' => 'auth'], function () {
 	Route::get('/dashboard_demo', 'HomeController@dashboard_demo')->name('dashboard_demo');
 	//------------------customer route start--------------------//
 	Route::get('/customer', 'CustomerController@index')->name('customer');
+	Route::post('/customer/data/json', 'CustomerController@datajson');
 	Route::get('/customer/getInfo/json/{id}', 'CustomerController@getCustomer');
 	Route::get('/customer/list', 'CustomerController@show');
 	Route::post('/customer/save', 'CustomerController@store');
@@ -92,6 +93,7 @@ Route::group(['middleware' => 'auth'], function () {
 	Route::get('/customer/import', 'CustomerController@importCustomer');
 	Route::post('/customer/import/save', 'CustomerController@importCustomerSave');
 	Route::get('/customer/report/{id}', 'CustomerController@customerReport'); 
+	Route::get('/customer/datatable', 'CustomerController@showCustomerDataTable'); 
 
 	//customer lead
 	Route::get('/customer/lead/new', 'CustomerLeadController@index');
@@ -450,6 +452,7 @@ Route::group(['middleware' => 'auth'], function () {
 	Route::post('/sales/cart/complete-sales', 'InvoiceController@CompleteSalesPOS');
 	Route::get('/sales/unsaved/invoice', 'InvoiceController@getUnsavedInvoice');
 	Route::get('/sales/unsaved/genarate/invoice/{id}', 'InvoiceController@genarateUnsavedInvoice');
+	Route::get('/sales/unsaved/delete/invoice/{id}', 'InvoiceController@deleteUnsavedInvoice');
 	//Route::post('/sales/cart/complete-sales', 'InvoiceController@CompleteSalesPOS');
 	Route::post('/sales/send/invoice', 'SendSalesEmailController@InvoiceMailSend');
 

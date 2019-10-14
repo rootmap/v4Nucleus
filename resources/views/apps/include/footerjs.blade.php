@@ -8,7 +8,7 @@
 
     //dd($userguideInit);
 ?>
-<span>{{$userguideInit}}</span>
+{{-- <span>{{$userguideInit}}</span> --}}
 <?php
 if($userguideInit==1)
 {

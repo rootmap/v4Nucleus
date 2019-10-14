@@ -771,9 +771,14 @@
  --}} */ ?>
  @section('js')
  <script type="text/javascript">
-     document.getElementById("copyButton").addEventListener("click", function() {
+     $(document).ready(function(){
+            $("#copyButton").click(function(){
+                copyToClipboard(document.getElementById("copyTarget"));
+            });
+     });
+     /*document.getElementById("copyButton").addEventListener("click", function() {
     copyToClipboard(document.getElementById("copyTarget"));
-});
+});*/
 
 function copyToClipboard(elem) {
       // create hidden text element, if it doesn't already exist

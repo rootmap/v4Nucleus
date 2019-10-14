@@ -69,140 +69,10 @@
 /* ========================================================================
  * PAGE BOXED
  * ======================================================================== */
-html.page-boxed, body.page-boxed {
-  background-color: #505050;
-}
-html.page-boxed #wrapper, body.page-boxed #wrapper {
-  margin-right: auto;
-  margin-left: auto;
-  position: relative;
-}
-html.page-boxed #back-top, body.page-boxed #back-top {
-  right: 90px;
-}
-html.page-boxed.page-sidebar-right-show #back-top, body.page-boxed.page-sidebar-right-show #back-top {
-  right: 310px;
-}
 
-@media (min-width: 1200px) {
-  html.page-boxed #wrapper, body.page-boxed #wrapper {
-    width: 1220px;
-  }
-}
-@media (min-width: 992px) and (max-width: 1199px) {
-  body.page-boxed #wrapper {
-    width: 970px;
-  }
-}
-@media (max-width: 1024px) {
-  body.page-boxed #back-top {
-    right: 60px;
-  }
-  body.page-boxed.page-sidebar-right-show #header .header-right {
-    left: 0px;
-  }
-  body.page-boxed.page-sidebar-right-show #sidebar-left {
-    left: 0px;
-  }
-  body.page-boxed.page-sidebar-right-show #sidebar-left:after {
-    left: 27px;
-  }
-  body.page-boxed.page-sidebar-right-show #page-content {
-    margin-left: 75px;
-  }
-  body.page-boxed.page-sidebar-right-show #page-content .breadcrumb-wrapper {
-    display: none;
-  }
-  body.page-boxed.page-sidebar-right-show #back-top {
-    right: 280px;
-  }
-}
-@media (max-width: 800px) {
-  body.page-boxed.page-sidebar-minimize-auto #header .navbar-toolbar .navbar-form input {
-    min-width: 350px;
-  }
-  body.page-boxed #header .header-right {
-    right: 0px !important;
-  }
-  body.page-boxed #page-content {
-    margin-right: 0px;
-  }
-  body.page-boxed #page-content .header-content .breadcrumb-wrapper {
-    display: none;
-  }
-  body.page-boxed #back-top {
-    right: 30px;
-  }
-  body.page-boxed.page-sidebar-right-show #header .header-right {
-    right: 220px !important;
-  }
-  body.page-boxed.page-sidebar-right-show #header .header-right .navbar-toolbar .navbar-form input {
-    min-width: 225px !important;
-  }
-  body.page-boxed.page-sidebar-right-show #sidebar-left:after {
-    left: 0px;
-  }
-}
-@media (max-width: 768px) {
-  body.page-boxed #sidebar-left {
-    left: -230px;
-  }
-  body.page-boxed #back-top {
-    right: 40px;
-  }
-  body.page-boxed.page-sidebar-right-show #header .header-right {
-    right: 0px !important;
-  }
-  body.page-boxed.page-sidebar-right-show #header .header-right .navbar-toolbar .navbar-form input {
-    min-width: 400px !important;
-  }
-  body.page-boxed.page-sidebar-right-show #sidebar-left, body.page-boxed.page-sidebar-right-show #sidebar-left:after {
-    left: -250px;
-  }
-}
-@media (max-width: 540px) {
-  body.page-boxed.page-sidebar-right-show #header .header-right {
-    left: -220px !important;
-  }
-}
 /* ========================================================================
  * PAGE HEADER FIXED
  * ======================================================================== */
-body.page-header-fixed .navbar-header, body.page-header-fixed .header-right {
-  position: fixed;
-}
-body.page-header-fixed .header-right {
-  right: 0px;
-  left: 220px;
-}
-body.page-header-fixed.page-sidebar-minimize .header-right, body.page-header-fixed.page-sidebar-minimize-auto .header-right {
-  left: 0px;
-}
-body.page-header-fixed.page-sidebar-minimize.page-sidebar-fixed .header-right, body.page-header-fixed.page-sidebar-minimize-auto.page-sidebar-fixed .header-right {
-  right: 0px;
-}
-body.page-header-fixed #sidebar-right .panel .panel-heading {
-  position: fixed;
-  z-index: 1000;
-  top: 0px;
-  right: 0px;
-  width: 220px;
-}
-body.page-header-fixed #sidebar-right .panel .panel-body {
-  margin-top: 53px;
-}
-
-@media (max-width: 768px) {
-  body.page-header-fixed #header .header-right {
-    left: 0px;
-  }
-  body.page-header-fixed #header .header-left {
-    position: fixed;
-  }
-  body.page-header-fixed.page-sidebar-left-show .navbar-toolbar {
-    left: 220px;
-  }
-}
 /* ========================================================================
  * PAGE SIDEBAR FIXED
  * ======================================================================== */
@@ -326,7 +196,7 @@ body.page-sidebar-minimize #sidebar-left .sidebar-menu > li:after, body.page-sid
 }
 body.page-sidebar-minimize #sidebar-left .sidebar-menu > li > a > .icon, body.page-sidebar-minimize-auto #sidebar-left .sidebar-menu > li > a > .icon {
   min-width: 75px;
-  margin-left: 6px;
+  margin-left: 5px;
   margin-right: 29px;
 }
 body.page-sidebar-minimize #sidebar-left .sidebar-menu > li > a > .icon:after, body.page-sidebar-minimize-auto #sidebar-left .sidebar-menu > li > a > .icon:after {
@@ -1974,6 +1844,7 @@ body.page-footer-fixed #back-top {
   display: block;
   padding: 6px 15px;
   text-decoration: none;
+  height: 46px;
 }
 .sidebar-menu > li > a:hover span {
   color: #d0d0d0;

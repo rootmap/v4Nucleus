@@ -24,7 +24,9 @@ class CustomerController extends Controller
 
     private $moduleName="Customer";
     private $sdc;
-    public function __construct(){ $this->sdc = new StaticDataController(); }
+    public function __construct(){ 
+        $this->sdc = new StaticDataController(); 
+    }
 
     public function user()
     {
@@ -257,8 +259,7 @@ class CustomerController extends Controller
     }
     public function index()
     {
-        $tab=Customer::where('store_id',$this->sdc->storeID())->get();
-        return view('apps.pages.customer.customer',['dataTable'=>$tab]);
+        return view('apps.pages.customer.customer');
     }
 
     /**
@@ -434,10 +435,128 @@ class CustomerController extends Controller
      * @param  \App\Customer  $customer
      * @return \Illuminate\Http\Response
      */
+    private function methodToGetMembersCount($search=''){
+
+        $tab=Customer::select('id','name','address','phone','email','last_invoice_no','created_at')
+                     ->where('store_id',$this->sdc->storeID())->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('id','LIKE','%'.$search.'%');
+                        $query->orWhere('name','LIKE','%'.$search.'%');
+                        $query->orWhere('address','LIKE','%'.$search.'%');
+                        $query->orWhere('phone','LIKE','%'.$search.'%');
+                        $query->orWhere('email','LIKE','%'.$search.'%');
+                        $query->orWhere('last_invoice_no','LIKE','%'.$search.'%');
+                        $query->orWhere('created_at','LIKE','%'.$search.'%');
+
+                        return $query;
+                     })
+
+                     ->count();
+        return $tab;
+    }
+
+    private function methodToGetMembers($start, $length,$search=''){
+
+        $tab=Customer::select('id','name','address','phone','email','last_invoice_no','created_at')
+                     ->where('store_id',$this->sdc->storeID())->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('id','LIKE','%'.$search.'%');
+                        $query->orWhere('name','LIKE','%'.$search.'%');
+                        $query->orWhere('address','LIKE','%'.$search.'%');
+                        $query->orWhere('phone','LIKE','%'.$search.'%');
+                        $query->orWhere('email','LIKE','%'.$search.'%');
+                        $query->orWhere('last_invoice_no','LIKE','%'.$search.'%');
+                        $query->orWhere('created_at','LIKE','%'.$search.'%');
+
+                        return $query;
+                     })
+                     ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function datajson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->methodToGetMembersCount($search); // get your total no of data;
+        $members = $this->methodToGetMembers($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
+    }
+
     public function show(Customer $customer)
     {
-        $tab=$customer::where('store_id',$this->sdc->storeID())->orderBy('id','DESC')->take(100)->get();
-        return view('apps.pages.customer.list',['dataTable'=>$tab]);
+
+
+        
+
+        //$tab=$customer::where('store_id',$this->sdc->storeID())->orderBy('id','DESC')->take(100)->get();
+        //return view('apps.pages.customer.list',['dataTable'=>$tab]);
+        return view('apps.pages.customer.list');
+    }
+
+    public function showCustomerDataTable(){
+        //echo $this->ssp->test(); die();
+        $dbDetails = array(
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'user' => env('DB_USERNAME', '127.0.0.1'),
+            'pass' => env('DB_PASSWORD', '127.0.0.1'),
+            'db'   => env('DB_DATABASE', '127.0.0.1')
+        );
+
+        //dd($dbDetails);
+
+        // DB table to use
+        $table = 'lsp_customers';
+
+        // Table's primary key
+        $primaryKey = 'id';
+
+        // Array of database columns which should be read and sent back to DataTables.
+        // The `db` parameter represents the column name in the database. 
+        // The `dt` parameter represents the DataTables column identifier.
+        $columns = array(
+            array( 'db' => 'name', 'dt' => 0 ),
+            array( 'db' => 'address',  'dt' => 1 ),
+            array( 'db' => 'email',      'dt' => 2 ),
+            array( 'db' => 'phone',     'dt' => 3 ),
+            array( 'db' => 'last_invoice_no',    'dt' => 4 ),
+            array(
+                'db'        => 'created_at',
+                'dt'        => 5,
+                'formatter' => function( $d, $row ) {
+                    return date( 'jS M Y', strtotime($d));
+                }
+            ),
+            array(
+                'db'        => 'store_id',
+                'dt'        => 6,
+                'formatter' => function( $d, $row ) {
+                    return ($d == 1)?'Active':'Inactive';
+                }
+            )
+        );
+
+        // Include SQL query processing class
+
+        // Output data as json format
+        echo json_encode(
+            $this->ssp->simple( $_GET, $dbDetails, $table, $primaryKey, $columns )
+        );
     }
 
     /**

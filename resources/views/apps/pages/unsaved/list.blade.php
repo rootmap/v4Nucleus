@@ -34,7 +34,7 @@
                                 <th>Customer Name</th>
                                 <th>Invoice Total</th>
                                 <th>Invoice Status</th>
-                                <th style="width: 200px;">Action</th>
+                                <th style="width: 250px;">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -54,7 +54,8 @@
                                 </td>
                                 <td>{{$row['invoice_status']}}</td>
                                 <td>
-                                        <a  href="{{url('sales/unsaved/genarate/invoice/'.$row['id'])}}" title="Genarate Invoice" class="btn btn-sm btn-outline-green btn-accent-2"><i class="icon-cart"></i> Genarate Invoice</a>
+                                        <a  href="{{url('sales/unsaved/genarate/invoice/'.$row['id'])}}" title="Genarate Invoice" class="btn btn-sm btn-outline-green btn-accent-2"><i class="icon-cart"></i> Genarate Invoice</a>   
+                                        <a  href="{{url('sales/unsaved/delete/invoice/'.$row['id'])}}" title="Delete Invoice" class="btn btn-sm btn-outline-red btn-accent-2"><i class="icon-delete"></i> Delete </a>
                                 </td>
                             </tr>
                             @endforeach

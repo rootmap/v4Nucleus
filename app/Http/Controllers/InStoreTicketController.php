@@ -942,8 +942,19 @@ class InStoreTicketController extends Controller
      */
     public function destroy(InStoreTicket $inStoreTicket,$id=0)
     {
-        
+        //InStoreTicket
+        $sessionInvoiceCount=InStoreTicket::where('store_id',$this->sdc->storeID())
+                                      ->where('id',$id)
+                                      ->count();
+        if($sessionInvoiceCount==1){
+            $sessionInvoice=InStoreTicket::where('store_id',$this->sdc->storeID())
+                                      ->where('id',$id)
+                                      ->delete();
 
+            return redirect(url('ticket/list'))->with('success','Ticket info deleted successfully.');
+        }else{
+            return redirect(url('ticket/list'))->with('error','Ticket info deletion failed.');
+        }
 
     }
     public function profitQuery($request)
