@@ -72,7 +72,7 @@ class InvoicePaymentController extends Controller
 
         if(empty($invoice_id) && empty($customer_id) && empty($tender_id) && empty($dateString))
         {
-            $invoice=InvoicePayment::where('store_id',$this->sdc->storeID())
+            /*$invoice=InvoicePayment::where('store_id',$this->sdc->storeID())
                      ->when($invoice_id, function ($query) use ($invoice_id) {
                             return $query->where('invoice_id','=', $invoice_id);
                      })
@@ -87,7 +87,8 @@ class InvoicePaymentController extends Controller
                      })
                      ->orderBy('id','DESC')
                      ->take(100)
-                     ->get();
+                     ->get();*/
+            $invoice=array();
         }
         else
         {
@@ -127,6 +128,67 @@ class InvoicePaymentController extends Controller
                 'end_date'=>$end_date
             ]);
     }
+
+
+    private function InvPaymentCount($search=''){
+
+        $tab=InvoicePayment::select('id','created_at','customer_name','tender_name','paid_amount','invoice_id')
+                     ->where('store_id',$this->sdc->storeID())->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('id','LIKE','%'.$search.'%');
+                        $query->orWhere('created_at','LIKE','%'.$search.'%');
+                        $query->orWhere('customer_name','LIKE','%'.$search.'%');
+                        $query->orWhere('tender_name','LIKE','%'.$search.'%');
+                        $query->orWhere('paid_amount','LIKE','%'.$search.'%');
+                        $query->orWhere('invoice_id','LIKE','%'.$search.'%');
+                        return $query;
+                     })
+                     ->count();
+        return $tab;
+    }
+
+    private function InvPayment($start, $length,$search=''){
+
+        $tab=InvoicePayment::select('id','created_at','customer_name','tender_name','paid_amount','invoice_id')
+                     ->where('store_id',$this->sdc->storeID())->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('id','LIKE','%'.$search.'%');
+                        $query->orWhere('created_at','LIKE','%'.$search.'%');
+                        $query->orWhere('customer_name','LIKE','%'.$search.'%');
+                        $query->orWhere('tender_name','LIKE','%'.$search.'%');
+                        $query->orWhere('paid_amount','LIKE','%'.$search.'%');
+                        $query->orWhere('invoice_id','LIKE','%'.$search.'%');
+                        return $query;
+                     })
+                     ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function datajson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->InvPaymentCount($search); // get your total no of data;
+        $members = $this->InvPayment($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
+    }
+
+
     public function profitQuery($request)
     {
         $invoice_id='';
@@ -340,7 +402,7 @@ class InvoicePaymentController extends Controller
 
         if(empty($invoice_id) && empty($customer_id) && empty($tender_id) && empty($dateString))
         {
-            $invoice=InvoicePayment::LeftJoin('invoices','invoice_payments.invoice_id','=','invoices.invoice_id')
+            /*$invoice=InvoicePayment::LeftJoin('invoices','invoice_payments.invoice_id','=','invoices.invoice_id')
                                  ->select('invoice_payments.*','invoices.Invoice_status as Invoice_status')
                                  ->where('invoice_payments.store_id',$this->sdc->storeID())
                                  ->where('invoice_payments.tender_name','Paypal')
@@ -358,22 +420,31 @@ class InvoicePaymentController extends Controller
                                  })
                                  ->orderBy('invoice_payments.id','DESC')
                                  ->take(100)
-                                 ->get();
+                                 ->get();*/
+
+            $invoice=array();
         }
         else
         {
             $invoice=InvoicePayment::LeftJoin('invoices','invoice_payments.invoice_id','=','invoices.invoice_id')
-                                 ->select('invoice_payments.*','invoices.Invoice_status as Invoice_status')
+                                 ->select(
+                            'invoice_payments.id',
+                            'invoice_payments.created_at',
+                            'invoice_payments.customer_name',
+                            'invoice_payments.tender_name',
+                            'invoice_payments.paid_amount',
+                            'invoice_payments.invoice_id',
+                            'invoices.Invoice_status as Invoice_status')
                                  ->where('invoice_payments.store_id',$this->sdc->storeID())
                                  ->where('invoice_payments.tender_name','Paypal')
                                  ->when($invoice_id, function ($query) use ($invoice_id) {
-                                        return $query->where('invoice_id','=', $invoice_id);
+                                        return $query->where('invoice_payments.invoice_id','=', $invoice_id);
                                  })
                                  ->when($customer_id, function ($query) use ($customer_id) {
-                                        return $query->where('customer_id','=', $customer_id);
+                                        return $query->where('invoice_payments.customer_id','=', $customer_id);
                                  })
                                  ->when($tender_id, function ($query) use ($tender_id) {
-                                        return $query->where('tender_id','=', $tender_id);
+                                        return $query->where('invoice_payments.tender_id','=', $tender_id);
                                  })
                                  ->when($dateString, function ($query) use ($dateString) {
                                         return $query->whereRaw($dateString);
@@ -402,6 +473,91 @@ class InvoicePaymentController extends Controller
                 'end_date'=>$end_date
             ]);
     }
+
+
+    private function paypalPaymentReportCount($search=''){
+
+        $tab=InvoicePayment::LeftJoin('invoices','invoice_payments.invoice_id','=','invoices.invoice_id')
+                          ->select(
+                            'invoice_payments.id',
+                            'invoice_payments.created_at',
+                            'invoice_payments.customer_name',
+                            'invoice_payments.tender_name',
+                            'invoice_payments.paid_amount',
+                            'invoice_payments.invoice_id',
+                            'invoices.Invoice_status as Invoice_status')
+                          ->where('invoice_payments.store_id',$this->sdc->storeID())
+                          ->where('invoice_payments.tender_name','Paypal')
+                          ->orderBy('invoice_payments.id','DESC')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('invoice_payments.id','LIKE','%'.$search.'%');
+                            $query->orWhere('invoice_payments.created_at','LIKE','%'.$search.'%');
+                            $query->orWhere('invoice_payments.customer_name','LIKE','%'.$search.'%');
+                            $query->orWhere('invoice_payments.tender_name','LIKE','%'.$search.'%');
+                            $query->orWhere('invoice_payments.paid_amount','LIKE','%'.$search.'%');
+                            $query->orWhere('invoice_payments.invoice_id','LIKE','%'.$search.'%');
+                            $query->orWhere('invoices.Invoice_status as Invoice_status','LIKE','%'.$search.'%');
+                            return $query;
+                          })
+                          ->count();
+        return $tab;
+    }
+
+    private function paypalPaymentReport($start, $length,$search=''){
+
+        $tab=InvoicePayment::LeftJoin('invoices','invoice_payments.invoice_id','=','invoices.invoice_id')
+                          ->select(
+                            'invoice_payments.id',
+                            'invoice_payments.created_at',
+                            'invoice_payments.customer_name',
+                            'invoice_payments.tender_name',
+                            'invoice_payments.paid_amount',
+                            'invoice_payments.invoice_id',
+                            'invoices.Invoice_status as Invoice_status')
+                          ->where('invoice_payments.store_id',$this->sdc->storeID())
+                          ->where('invoice_payments.tender_name','Paypal')
+                          ->orderBy('invoice_payments.id','DESC')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('invoice_payments.id','LIKE','%'.$search.'%');
+                            $query->orWhere('invoice_payments.created_at','LIKE','%'.$search.'%');
+                            $query->orWhere('invoice_payments.customer_name','LIKE','%'.$search.'%');
+                            $query->orWhere('invoice_payments.tender_name','LIKE','%'.$search.'%');
+                            $query->orWhere('invoice_payments.paid_amount','LIKE','%'.$search.'%');
+                            $query->orWhere('invoice_payments.invoice_id','LIKE','%'.$search.'%');
+                            $query->orWhere('invoices.Invoice_status as Invoice_status','LIKE','%'.$search.'%');
+                            return $query;
+                          })
+                          ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function paypalPaymentReportjson(Request $request){
+
+        
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->paypalPaymentReportCount($search); // get your total no of data;
+        $members = $this->paypalPaymentReport($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
+    }
+
+
     public function PaypalprofitQuery($request)
     {
         $invoice_id='';

@@ -119,20 +119,20 @@
 
 <div class="col-lg-4 col-sm-12 border-right-pink bg-green bg-lighten-1 border-right-lighten-4">
             <div class="card-block text-xs-center">
-                <h1 class="display-4 white"><i class="icon-cart font-large-2"></i> ${{$invoice_total}}</h1>
+                <h1 class="display-4 white"><i class="icon-cart font-large-2"></i> $<span id="totalDataAmount">{{$invoice_total}}</span></h1>
                 <span class="white">Total Invoice</span>
             </div>
         </div>
         <div class="col-lg-4 col-sm-12 bg-green bg-lighten-2 border-right-pink border-right-lighten-4">
             <div class="card-block text-xs-center">
-                <h1 class="display-4 white"><i class="icon-trending_up font-large-2"></i> ${{$cost_total}}</h1>
+                <h1 class="display-4 white"><i class="icon-trending_up font-large-2"></i> $<span id="totalDataCost">{{$cost_total}}</span></h1>
                 <span class="white">Total Cost</span>
             </div>
         </div>
         
         <div class="col-lg-4 bg-green bg-lighten-3 col-sm-12">
             <div class="card-block text-xs-center">
-                <h1 class="display-4 white"><i class="icon-banknote font-large-2"></i> ${{$profit_total}}</h1>
+                <h1 class="display-4 white"><i class="icon-banknote font-large-2"></i> $<span id="totalDataProfit">{{$profit_total}}</span></h1>
                 <span class="white">Profit</span>
             </div>
         </div>
@@ -155,13 +155,14 @@
 			</div>
 			<div class="card-body collapse in">
 				<div class="table-responsive">
-					<table class="table table-striped table-bordered zero-configuration">
+					<table class="table table-striped table-bordered" id="report_table">
 						<thead>
 							<tr>
 								<th>ID</th>
 								<th>INVOICE ID</th>
 								<th>INVOICE DATE</th>
-								<th>SOLD TO</th>
+								<th width="250">PPRODUCT</th>
+								<th width="250">SOLD TO</th>
 								<th>INVOICE TOTAL AMOUNT</th>
 								<th>TOTAL COST AMOUNT</th>
 								<th>PROFIT</th>
@@ -174,6 +175,7 @@
 	                                <td>{{$inv->id}}</td>
 	                                <td>{{$inv->invoice_id}}</td>
 	                                <td>{{formatDate($inv->created_at)}}</td>
+	                                <td>{{$inv->product}}</td>
 	                                <td>{{$inv->customer_name}}</td>
 	                                <td>{{$inv->total_amount}}</td>
 	                                <td>{{$inv->total_cost}}</td>
@@ -207,4 +209,88 @@
 @endsection
 
 
-@include('apps.include.datatable',['JDataTable'=>1,'selectTwo'=>1,'dateDrop'=>1])
+@include('apps.include.datatablecssjs',['selectTwo'=>1,'dateDrop'=>1])
+@section('RoleWiseMenujs')
+   <script>
+	
+	$(document).ready(function(e){
+
+		var dataObj="";
+		function replaceNull(valH){
+			var returnHt='';
+
+			if(valH !== null && valH !== '') {
+					returnHt=valH;
+			}
+
+			return returnHt;
+		}
+
+		@if(!empty($start_date) || !empty($end_date) || !empty($customer_id) || !empty($invoice_id))
+			@if(isset($invoice))
+        		@if(count($invoice)>0)
+        			$('#report_table').DataTable();
+        		@endif
+        	@endif
+        @else
+
+		$('#report_table').dataTable({
+			"bProcessing": true,
+         	"serverSide": true,
+         	"ajax":{
+	            url :"{{url('profit/data/report/json')}}",
+	            headers: {
+			        'X-CSRF-TOKEN':'{{csrf_token()}}',
+			    },
+	            type: "POST",
+	            complete:function(data){
+	            	console.log(data.responseJSON);
+	            	var totalData=data.responseJSON;
+	            	console.log(totalData.data);
+	            	var strHTML='';
+	            	var totalPrice=0;
+	            	var totalCost=0;
+	            	var totalProfit=0;
+	            	$.each(totalData.data,function(key,row){
+	            		console.log(row);
+
+	            		strHTML+='<tr>';
+						strHTML+='		<td>'+row.id+'</td>';
+						strHTML+='		<td>'+replaceNull(row.invoice_id)+'</td>';
+						strHTML+='		<td>'+formatDate(replaceNull(row.created_at))+'</td>';
+						strHTML+='		<td>'+replaceNull(row.product)+'</td>';						
+						strHTML+='		<td>'+replaceNull(row.customer_name)+'</td>';						
+						strHTML+='		<td>'+number_format(replaceNull(row.total_amount))+'</td>';						
+						strHTML+='		<td>'+number_format(replaceNull(row.total_cost))+'</td>';						
+						strHTML+='		<td>'+number_format(replaceNull(row.total_profit))+'</td>';						
+						strHTML+='</tr>';
+
+						totalPrice+=replaceNull(row.total_amount)-0;
+						totalCost+=replaceNull(row.total_cost)-0;
+						totalProfit+=replaceNull(row.total_profit)-0;
+
+	            	});
+
+	            	$("#totalDataAmount").html(number_format(totalPrice));
+	            	$("#totalDataCost").html(number_format(totalCost));
+	            	$("#totalDataProfit").html(number_format(totalProfit));
+
+	            	$("tbody").html(strHTML);
+	            	$('#report_table').DataTable();
+	            },
+	            initComplete: function(settings, json) {
+				    alert( 'DataTables has finished its initialisation.' );
+				  },
+	            error: function(){
+	              $("#report_table_processing").css("display","none");
+	            }
+          	}
+        });
+
+        @endif
+	});
+
+
+    </script>
+
+@endsection

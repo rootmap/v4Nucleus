@@ -117,10 +117,10 @@ ELSE IFNULL(TIME_FORMAT(TIMEDIFF(CONCAT(out_date, ' ', IF(LOCATE('PM',out_time) 
             $userL=DB::table("users")->where('store_id',$this->sdc->storeID())->orderBy('id','ASC')->get();
         }
 
-        $tab=$this->filterReport($request);
+        
 
 
-        $dataD=['dataTable'=>$tab,'userL'=>$userL];
+        $dataD=['userL'=>$userL];
         if(isset($request->start_date))
         {
             if(!empty($request->start_date))
@@ -150,6 +150,15 @@ ELSE IFNULL(TIME_FORMAT(TIMEDIFF(CONCAT(out_date, ' ', IF(LOCATE('PM',out_time) 
             
         }
 
+        if(empty($request->start_date) && empty($request->end_date) && empty($request->user_id)){
+            $tab=array();
+        }else{
+            $tab=$this->filterReport($request);
+        }
+
+        
+        //,
+        $dataD=array_merge($dataD,['dataTable'=>$tab]);
        // dd($dataD);
         
         return view('apps.pages.punch.report',$dataD);
@@ -271,6 +280,70 @@ ELSE IFNULL(TIME_FORMAT(TIMEDIFF(CONCAT(out_date, ' ', IF(LOCATE('PM',out_time) 
 
 
         return $tab;
+    }
+
+    private function datatableCashierPunchCount($search=''){
+
+        $tab=CashierPunch::select('id','name','in_date','in_time','out_date','out_time','created_at',\DB::Raw("CASE WHEN out_time = '00:00:00' THEN '00:00:00' 
+    ELSE IFNULL(TIME_FORMAT(TIMEDIFF(CONCAT(out_date, ' ', IF(LOCATE('PM',out_time) > 0, ADDTIME(TIME(REPLACE(out_time, ' PM','')), '12:00:00'),  TIME(REPLACE(out_time, ' AM','')))),CONCAT(in_date, ' ', IF(LOCATE('PM',in_time) > 0, ADDTIME(TIME(REPLACE(in_time, ' PM','')), '12:00:00'),  TIME(REPLACE(in_time, ' AM',''))))),'%H:%i:%s'),'00:00:00') END AS elapsed_time"))
+                          ->where('store_id',$this->sdc->storeID())
+                          ->orderBy('id','DESC')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('id','LIKE','%'.$search.'%');
+                            $query->orWhere('name','LIKE','%'.$search.'%');
+                            $query->orWhere('created_at','LIKE','%'.$search.'%');
+                            $query->orWhere('in_date','LIKE','%'.$search.'%');
+                            $query->orWhere('in_time','LIKE','%'.$search.'%');
+                            $query->orWhere('out_date','LIKE','%'.$search.'%');
+                            $query->orWhere('out_time','LIKE','%'.$search.'%');
+                            return $query;
+                          })
+                          ->count();
+        return $tab;
+    }
+
+    private function datatableCashierPunch($start, $length,$search=''){
+
+        $tab=CashierPunch::select('id','name','in_date','in_time','out_date','out_time','created_at',\DB::Raw("CASE WHEN out_time = '00:00:00' THEN '00:00:00' 
+    ELSE IFNULL(TIME_FORMAT(TIMEDIFF(CONCAT(out_date, ' ', IF(LOCATE('PM',out_time) > 0, ADDTIME(TIME(REPLACE(out_time, ' PM','')), '12:00:00'),  TIME(REPLACE(out_time, ' AM','')))),CONCAT(in_date, ' ', IF(LOCATE('PM',in_time) > 0, ADDTIME(TIME(REPLACE(in_time, ' PM','')), '12:00:00'),  TIME(REPLACE(in_time, ' AM',''))))),'%H:%i:%s'),'00:00:00') END AS elapsed_time"))
+                          ->where('store_id',$this->sdc->storeID())
+                          ->orderBy('id','DESC')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('id','LIKE','%'.$search.'%');
+                            $query->orWhere('name','LIKE','%'.$search.'%');
+                            $query->orWhere('created_at','LIKE','%'.$search.'%');
+                            $query->orWhere('in_date','LIKE','%'.$search.'%');
+                            $query->orWhere('in_time','LIKE','%'.$search.'%');
+                            $query->orWhere('out_date','LIKE','%'.$search.'%');
+                            $query->orWhere('out_time','LIKE','%'.$search.'%');
+                            return $query;
+                          })
+                          ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function datatableCashierPunchjson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->datatableCashierPunchCount($search); // get your total no of data;
+        $members = $this->datatableCashierPunch($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
     }
 
 

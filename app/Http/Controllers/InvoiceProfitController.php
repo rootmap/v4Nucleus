@@ -18,6 +18,71 @@ class InvoiceProfitController extends Controller
     private $sdc;
     public function __construct(){ $this->sdc = new StaticDataController(); }
 
+    private function methodToGetMembersCount($search=''){
+
+        $tab=Invoice::join('customers','invoices.customer_id','=','customers.id')
+                     ->select('invoices.id','invoices.invoice_id','invoices.created_at','invoices.total_amount','invoices.total_cost','invoices.total_profit','customers.name as customer_name')
+                     ->where('invoices.store_id',$this->sdc->storeID())
+                     ->orderBy('invoices.id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('invoices.id','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.invoice_id','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.created_at','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.total_amount','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.total_cost','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.total_profit','LIKE','%'.$search.'%');
+                        $query->orWhere('customers.name as customer_name','LIKE','%'.$search.'%');
+                        return $query;
+                     })
+                     ->count();
+        return $tab;
+    }
+
+    private function methodToGetMembers($start, $length,$search=''){
+
+        $tab=Invoice::join('customers','invoices.customer_id','=','customers.id')
+                     ->select('invoices.id','invoices.invoice_id','invoices.created_at','invoices.total_amount','invoices.total_cost','invoices.total_profit','customers.name as customer_name',\DB::Raw("(SELECT GROUP_CONCAT((SELECT p.name FROM lsp_products AS p WHERE p.id=d.product_id) SEPARATOR ', ')
+FROM lsp_invoice_products AS d WHERE d.invoice_id=lsp_invoices.invoice_id
+GROUP BY d.invoice_id) as product"))
+                     ->where('invoices.store_id',$this->sdc->storeID())
+                     ->orderBy('invoices.id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('invoices.id','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.invoice_id','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.created_at','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.total_amount','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.total_cost','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.total_profit','LIKE','%'.$search.'%');
+                        $query->orWhere('customers.name as customer_name','LIKE','%'.$search.'%');
+                        return $query;
+                     })
+                     ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function datajson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->methodToGetMembersCount($search); // get your total no of data;
+        $members = $this->methodToGetMembers($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
+    }
 
     public function index(Request $request)
     {
@@ -64,7 +129,7 @@ class InvoiceProfitController extends Controller
 
         if(empty($invoice_id) && empty($customer_id) && empty($dateString))
         {
-            $invoice=Invoice::join('customers','invoices.customer_id','=','customers.id')
+            /*$invoice=Invoice::join('customers','invoices.customer_id','=','customers.id')
                      ->select('invoices.*','customers.name as customer_name')
                      ->where('invoices.store_id',$this->sdc->storeID())
                      ->when($invoice_id, function ($query) use ($invoice_id) {
@@ -78,12 +143,16 @@ class InvoiceProfitController extends Controller
                      })
                      ->orderBy('invoices.id','DESC')
                      ->take(100)
-                     ->get();
+                     ->get();*/
+
+            $invoice=array();
         }
         else
         {
             $invoice=Invoice::join('customers','invoices.customer_id','=','customers.id')
-                     ->select('invoices.*','customers.name as customer_name')
+                     ->select('invoices.*','customers.name as customer_name',\DB::Raw("(SELECT GROUP_CONCAT((SELECT p.name FROM lsp_products AS p WHERE p.id=d.product_id) SEPARATOR ', ')
+FROM lsp_invoice_products AS d WHERE d.invoice_id=lsp_invoices.invoice_id
+GROUP BY d.invoice_id) as product"))
                      ->where('invoices.store_id',$this->sdc->storeID())
                      ->when($invoice_id, function ($query) use ($invoice_id) {
                             return $query->where('invoices.invoice_id','=', $invoice_id);
@@ -172,7 +241,9 @@ class InvoiceProfitController extends Controller
 
 
         $invoice=Invoice::join('customers','invoices.customer_id','=','customers.id')
-                     ->select('invoices.*','customers.name as customer_name')
+                     ->select('invoices.*','customers.name as customer_name',\DB::Raw("(SELECT GROUP_CONCAT((SELECT p.name FROM lsp_products AS p WHERE p.id=d.product_id) SEPARATOR ', ')
+FROM lsp_invoice_products AS d WHERE d.invoice_id=lsp_invoices.invoice_id
+GROUP BY d.invoice_id) as product"))
                      ->where('invoices.store_id',$this->sdc->storeID())
                      ->when($invoice_id, function ($query) use ($invoice_id) {
                             return $query->where('invoices.invoice_id','=', $invoice_id);
@@ -193,11 +264,11 @@ class InvoiceProfitController extends Controller
 
         //excel 
         $data=array();
-        $array_column=array('Invoice ID','Customer Name','Total Amount','Total Cost','Total Profit','Invoice Date');
+        $array_column=array('Invoice ID','Product','Customer Name','Total Amount','Total Cost','Total Profit','Invoice Date');
         array_push($data, $array_column);
         $inv=$this->profitQuery($request);
         foreach($inv as $voi):
-            $inv_arry=array($voi->invoice_id,$voi->customer_name,$voi->total_amount,$voi->total_cost,$voi->total_profit,formatDate($voi->created_at));
+            $inv_arry=array($voi->invoice_id,$voi->product,$voi->customer_name,$voi->total_amount,$voi->total_cost,$voi->total_profit,formatDate($voi->created_at));
             array_push($data, $inv_arry);
         endforeach;
 
@@ -239,6 +310,7 @@ class InvoiceProfitController extends Controller
                 <tr>
                 <th class="text-center" style="font-size:12px;" >Invoice ID</th>
                 <th class="text-center" style="font-size:12px;" >Invoice Date</th>
+                <th class="text-center" style="font-size:12px;" >Product</th>
                 <th class="text-center" style="font-size:12px;" >Sold To</th>
                 <th class="text-center" style="font-size:12px;" >Invoice Total Amount</th>
                 <th class="text-center" style="font-size:12px;" >Total Cost Amount</th>
@@ -255,6 +327,7 @@ class InvoiceProfitController extends Controller
                         $html .='<tr>
                         <td>'.$voi->invoice_id.'</td>
                         <td>'.formatDate($voi->created_at).'</td>
+                        <td>'.$voi->product.'</td>
                         <td>'.$voi->customer_name.'</td>
                         <td>'.$voi->total_amount.'</td>
                         <td>'.$voi->total_cost.'</td>

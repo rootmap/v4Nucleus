@@ -115,13 +115,13 @@
 			</div>
 			<div class="card-body collapse in">
 				<div class="table-responsive">
-					<table class="table table-striped table-bordered zero-configuration">
+					<table class="table table-striped table-bordered" id="report_table">
 						<thead>
 							<tr>
 								<th>Id</th>
 								<th>Date</th>
-								<th>Customer</th>
-								<th>Ticket Subject</th>
+								<th width="250">Customer</th>
+								<th width="600">Ticket Subject</th>
 								<th>Our Cost</th>
 								<th>Retail Price</th>
 								<th>Status</th>
@@ -147,7 +147,7 @@
 	                                <td>{{$inv->invoice_id}}</td>
 	                            </tr>
 	                            <?php 
-								$paid_amount+=$inv->price;
+	
 								?>
 	                            @endforeach
 							@endif
@@ -159,15 +159,6 @@
 		</div>
 
 
-
-
-						<div class="col-lg-4 col-sm-4 border-right-green bg-green border-right-lighten-4">
-                            <div class="card-block text-xs-center">
-                                <h1 class="display-4 white"><i class="icon-money font-large-2"></i> ${{$paid_amount}}</h1>
-                                <span class="white">Total Paid Amount</span>
-                            </div>
-                        </div>
-                        
 
 
 
@@ -183,4 +174,80 @@
 @endsection
 
 
-@include('apps.include.datatable',['JDataTable'=>1,'selectTwo'=>1,'dateDrop'=>1])
+@include('apps.include.datatablecssjs',['selectTwo'=>1,'dateDrop'=>1])
+@section('RoleWiseMenujs')
+   <script>
+    
+    $(document).ready(function(e){
+
+        var dataObj="";
+        function replaceNull(valH){
+            var returnHt='';
+            if(valH !== null && valH !== '') {
+                    returnHt=valH;
+            }
+            return returnHt;
+        }
+
+        
+
+        @if(!empty($start_date) || !empty($end_date) || !empty($invoice_id) || !empty($customer_id))
+            @if(isset($invoice))
+                @if(count($invoice)>0)
+                    $('#report_table').DataTable();
+                @endif
+            @endif
+        @else
+
+        $('#report_table').dataTable({
+            "bProcessing": true,
+            "serverSide": true,
+            "ajax":{
+                url :"{{url('ticket/data/report/json')}}",
+                headers: {
+                    'X-CSRF-TOKEN':'{{csrf_token()}}',
+                },
+                type: "POST",
+                complete:function(data){
+                    console.log(data.responseJSON);
+                    var totalData=data.responseJSON;
+                    console.log(totalData.data);
+                    var strHTML='';
+                    var totalPrice=0;
+                    $.each(totalData.data,function(key,row){
+                                                     
+                        strHTML+='<tr>';
+                        strHTML+='      <td>'+row.id+'</td>';
+                        strHTML+='      <td>'+formatDate(replaceNull(row.created_at))+'</td>'; 
+                        strHTML+='      <td>'+replaceNull(row.customer_name)+'</td>';
+                        strHTML+='      <td>'+replaceNull(row.product_name)+'</td>';
+                        strHTML+='      <td>'+number_format(replaceNull(row.our_cost))+'</td>';
+                        strHTML+='      <td>'+number_format(replaceNull(row.retail_price))+'</td>';
+                        strHTML+='      <td>'+replaceNull(row.payment_status)+'</td>';
+                        strHTML+='      <td>'+replaceNull(row.invoice_id)+'</td>';
+                        strHTML+='</tr>';
+
+
+                    });
+
+ 
+
+                    $("tbody").html(strHTML);
+                    $('#report_table').DataTable();
+                },
+                initComplete: function(settings, json) {
+                    alert( 'DataTables has finished its initialisation.' );
+                  },
+                error: function(){
+                  $("#report_table_processing").css("display","none");
+                }
+            }
+        });
+
+        @endif
+    });
+
+
+    </script>
+
+@endsection

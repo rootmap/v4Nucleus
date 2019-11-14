@@ -25,7 +25,7 @@
 			</div>
 			<div class="card-body collapse in">
 				<div class="table-responsive">
-					<table class="table table-striped table-bordered zero-configuration">
+					<table class="table table-striped table-bordered" id="customer_lead">
 						<thead>
 							<tr>
 								<th>ID</th>
@@ -37,7 +37,7 @@
 							</tr>
 						</thead>
 						<tbody>
-							@if(isset($dataTable))
+							{{-- @if(isset($dataTable))
 							@foreach($dataTable as $row)
 							<tr>
 								<td>{{$row->id}}</td>
@@ -55,7 +55,7 @@
 							<tr>
 								<td colspan="6">No Record Found</td>
 							</tr>
-							@endif
+							@endif --}}
 						</tbody>
 					</table>
 				</div>
@@ -69,4 +69,85 @@
 </section>
 @endsection
 
-@include('apps.include.datatable',['JDataTable'=>1])
+@include('apps.include.datatablecssjs')
+@section('RoleWiseMenujs')
+   <script>
+	
+	$(document).ready(function(e){
+		var customerEditLink="{{url('customer/lead/edit')}}";
+		var customerDeleteLink="{{url('customer/lead/delete')}}";
+
+		function actionTemplate(id){
+			var actHTml='';
+				actHTml+='<a href="'+customerEditLink+'/'+id+'" class="btn btn-green mr-1 btn-darken-2" ';
+				@if($userguideInit==1) 
+				actHTml+=' data-step="2" data-intro="If you want you can modify your information when you click this button." ';
+				@endif
+				actHTml+=' >	<i class="icon-edit"></i> </a>';
+
+				actHTml+='<a href="'+customerDeleteLink+'/'+id+'" class="btn btn-green mr-1 btn-darken-3" ';
+				@if($userguideInit==1) 
+					actHTml+='data-step="3" data-intro="If you want delect then click this button." ';
+				@endif
+				actHTml+=' >	<i class="icon-trash"></i> </a>';
+
+				return actHTml;
+		}
+
+		function replaceNull(valH){
+			var returnHt='';
+
+			if(valH !== null && valH !== '') {
+					returnHt=valH;
+				
+				
+			}
+
+			return returnHt;
+		}
+
+		$('#customer_lead').dataTable({
+			"bProcessing": true,
+         	"serverSide": true,
+         	"ajax":{
+	            url :"{{url('customer/lead/data/json')}}",
+	            headers: {
+			        'X-CSRF-TOKEN':'{{csrf_token()}}',
+
+			    },
+	            type: "POST",
+	            complete:function(data){
+	            	console.log(data.responseJSON);
+	            	var totalData=data.responseJSON;
+	            	console.log(totalData.data);
+	            	var strHTML='';
+	            	$.each(totalData.data,function(key,row){
+	            		console.log(row);
+	            		strHTML+='<tr>';
+						strHTML+='		<td>'+row.id+'</td>';
+						strHTML+='		<td>'+row.name+'</td>';
+						strHTML+='		<td>'+replaceNull(row.phone)+'</td>';
+						strHTML+='		<td>'+replaceNull(row.email)+'</td>';
+						strHTML+='		<td>'+replaceNull(row.lead_info)+'</td>';
+						strHTML+='		<td>'+actionTemplate(row.id)+'</td>';
+						strHTML+='</tr>';
+	            	});
+
+	            	$("tbody").html(strHTML);
+
+	            	$('#customer_lead').DataTable();
+	            },
+	            initComplete: function(settings, json) {
+				    alert( 'DataTables has finished its initialisation.' );
+				  },
+	            error: function(){
+	              $("#customer_lead_processing").css("display","none");
+	            }
+          	}
+        });
+	});
+
+
+    </script>
+
+@endsection

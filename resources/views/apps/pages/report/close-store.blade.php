@@ -105,7 +105,7 @@
 			</div>
 			<div class="card-body collapse in">
 				<div class="table-responsive">
-					<table class="table table-striped table-bordered zero-configuration">
+					<table class="table table-striped table-bordered" id="report_table">
 						<thead>
 							<tr>
 								<th>Id</th>
@@ -155,13 +155,13 @@
 
 						<div class="col-lg-4 col-sm-4 border-right-blue bg-blue border-right-lighten-4">
                             <div class="card-block text-xs-center">
-                                <h1 class="display-4 white"><i class="icon-money font-large-2"></i> ${{$opening_amount}}</h1>
+                                <h1 class="display-4 white"><i class="icon-money font-large-2"></i> $<span id="totalOpeningAmount">{{$opening_amount}}</span></h1>
                                 <span class="white">Total Opeing Amount</span>
                             </div>
                         </div>
                         <div class="col-lg-4 col-sm-4 border-right-blue bg-blue border-right-lighten-4">
                             <div class="card-block text-xs-center">
-                                <h1 class="display-4 white"><i class="icon-money font-large-2"></i> ${{$closing_amount}}</h1>
+                                <h1 class="display-4 white"><i class="icon-money font-large-2"></i> $<span id="totalClosingAmount">{{$closing_amount}}</span></h1>
                                 <span class="white">Total Closing Amount</span>
                             </div>
                         </div>
@@ -183,5 +183,89 @@
 
 @endsection
 
+@include('apps.include.datatablecssjs',['selectTwo'=>1,'dateDrop'=>1,'storecloseDetailReport'=>1])
+@section('RoleWiseMenujs')
+   <script>
+	
+	$(document).ready(function(e){
 
-@include('apps.include.datatable',['JDataTable'=>1,'selectTwo'=>1,'dateDrop'=>1,'storecloseDetailReport'=>1])
+		var dataObj="";
+		function replaceNull(valH){
+			var returnHt='';
+
+			if(valH !== null && valH !== '') {
+					returnHt=valH;
+			}
+
+			return returnHt;
+		}
+
+		function actionTemplate(id){
+			var strHTML='';
+				strHTML+='<a href="javascript:openCloseStoreInfo('+id+');" class="btn btn-green"><i class="icon-document"></i> View Report</a>';
+
+				return strHTML;
+		}
+
+		@if(!empty($start_date) || !empty($end_date) || !empty($user_id))
+			@if(isset($tabledata))
+        		@if(count($tabledata)>0)
+        			$('#report_table').DataTable();
+        		@endif
+        	@endif
+        @else
+
+		$('#report_table').dataTable({
+			"bProcessing": true,
+         	"serverSide": true,
+         	"ajax":{
+	            url :"{{url('store/close/data/report/json')}}",
+	            headers: {
+			        'X-CSRF-TOKEN':'{{csrf_token()}}',
+			    },
+	            type: "POST",
+	            complete:function(data){
+	            	console.log(data.responseJSON);
+	            	var totalData=data.responseJSON;
+	            	console.log(totalData.data);
+	            	var strHTML='';
+	            	var totalOpeing=0;
+	            	var totalClosing=0;
+	            	$.each(totalData.data,function(key,row){
+	            		console.log(row);
+	            		strHTML+='<tr>';
+						strHTML+='		<td>'+row.id+'</td>';
+						strHTML+='		<td>'+formatDateTime(replaceNull(row.opeing_time))+'</td>';
+						strHTML+='		<td>'+number_format(replaceNull(row.opening_amount))+'</td>';
+						strHTML+='		<td>'+formatDateTime(replaceNull(row.closing_time))+'</td>';
+						strHTML+='		<td>'+number_format(replaceNull(row.closing_amount))+'</td>';
+						strHTML+='		<td>'+replaceNull(row.cashier_name)+'</td>';
+						strHTML+='		<td>'+formatDate(replaceNull(row.created_at))+'</td>';						
+						strHTML+='		<td>'+actionTemplate(row.id)+'</td>';						
+						strHTML+='</tr>';
+						totalOpeing+=replaceNull(row.opening_amount)-0;
+						totalClosing+=replaceNull(row.closing_amount)-0;
+	            	});
+
+	            	$("#totalOpeningAmount").html(number_format(totalOpeing));
+	            	$("#totalClosingAmount").html(number_format(totalClosing));
+
+	            	$("#report_table").find("tbody").html(strHTML);
+	            	$('#report_table').DataTable();
+	            },
+	            initComplete: function(settings, json) {
+				    alert( 'DataTables has finished its initialisation.' );
+				  },
+	            error: function(){
+	              $("#report_table_processing").css("display","none");
+	            }
+          	}
+        });
+
+        @endif
+	});
+
+
+    </script>
+
+@endsection

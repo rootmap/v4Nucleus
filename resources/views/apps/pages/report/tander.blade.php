@@ -134,15 +134,14 @@
 
                 <div class="card-body collapse in">
                     <div class="table-responsive" style="min-height: 360px;">
-                        <table class="table table-striped table-bordered zero-configuration">
+                        <table class="table table-striped table-bordered" id="report_table">
                         <thead>
                             <tr>
                                 <th>ID</th>
                                 <th>Invoice ID</th>
                                 <th>Invoice Date</th>
-                                <th>Sold To</th>
-                                <th>Tender</th>
-                                {{-- <th>Status</th> --}}
+                                <th width="250">Sold To</th>
+                                <th width="200">Tender</th>
                                 <th>Paid Amount</th>
                             </tr>
                         </thead>
@@ -158,14 +157,7 @@
                                 <td>{{formatDate($row->created_at)}}</td>
                                 <td>{{$row->customer_name}}</td>
                                 <td>{{$row->tender_name}}</td>
-                                {{-- <td>{{$row->invoice_status}}</td> --}}
-                                {{-- <td>
-                                    @if($row->invoice_status=="Paid")
-                                        <span class="btn btn-green btn-lighten-1">{{$row->invoice_status}}</span>
-                                    @endif
-                                </td> --}}
                                 <td>{{number_format($row->paid_amount,2)}}</td>
-                                
                             </tr>
                             <?php 
                                 $paid_amount+=$row->paid_amount;
@@ -183,16 +175,91 @@
         </div>
         <div class="col-lg-4 col-sm-4 border-right-green bg-green border-right-lighten-4">
             <div class="card-block text-xs-center">
-                <h1 class="display-4 white"><i class="icon-money font-large-2"></i> ${{$paid_amount}}</h1>
+                <h1 class="display-4 white"><i class="icon-money font-large-2"></i> $<span id="totalDataAmount">{{$paid_amount}}</span></h1>
                 <span class="white">Total Paid Amount</span>
             </div>
         </div>
     </div>
 </div>
 <!-- Both borders end -->
-@include('apps.include.modal.sendSlipModal')
 </section>
 
 @endsection
 
-@include('apps.include.datatable',['JDataTable'=>1,'selectTwo'=>1,'dateDrop'=>1,'invoiceSlip'=>1])
+
+@include('apps.include.datatablecssjs',['selectTwo'=>1,'dateDrop'=>1,'invoiceSlip'=>1])
+@section('RoleWiseMenujs')
+   <script>
+    
+    $(document).ready(function(e){
+
+        var dataObj="";
+        function replaceNull(valH){
+            var returnHt='';
+            if(valH !== null && valH !== '') {
+                    returnHt=valH;
+            }
+            return returnHt;
+        }
+
+        
+
+        @if(!empty($start_date) || !empty($end_date) || !empty($invoice_id) || !empty($tender_id) || !empty($customer_id))
+            @if(isset($dataTable))
+                @if(count($dataTable)>0)
+                    $('#report_table').DataTable();
+                @endif
+            @endif
+        @else
+
+        $('#report_table').dataTable({
+            "bProcessing": true,
+            "serverSide": true,
+            "ajax":{
+                url :"{{url('report/data/tender/json')}}",
+                headers: {
+                    'X-CSRF-TOKEN':'{{csrf_token()}}',
+                },
+                type: "POST",
+                complete:function(data){
+                    console.log(data.responseJSON);
+                    var totalData=data.responseJSON;
+                    console.log(totalData.data);
+                    var strHTML='';
+                    var totalPrice=0;
+                    $.each(totalData.data,function(key,row){
+                                                     
+                        strHTML+='<tr>';
+                        strHTML+='      <td>'+row.id+'</td>';
+                        strHTML+='      <td>'+replaceNull(row.invoice_id)+'</td>';
+                        strHTML+='      <td>'+formatDate(replaceNull(row.created_at))+'</td>'; 
+                        strHTML+='      <td>'+replaceNull(row.customer_name)+'</td>';
+                        strHTML+='      <td>'+replaceNull(row.tender_name)+'</td>';
+                        strHTML+='      <td>'+number_format(replaceNull(row.paid_amount))+'</td>';
+                        strHTML+='</tr>';
+
+                        totalPrice+=number_format(replaceNull(row.paid_amount))-0;
+
+                    });
+
+                    $("#totalDataAmount").html(number_format(totalPrice));
+
+                    $("tbody").html(strHTML);
+                    $('#report_table').DataTable();
+                },
+                initComplete: function(settings, json) {
+                    alert( 'DataTables has finished its initialisation.' );
+                  },
+                error: function(){
+                  $("#report_table_processing").css("display","none");
+                }
+            }
+        });
+
+        @endif
+    });
+
+
+    </script>
+
+@endsection

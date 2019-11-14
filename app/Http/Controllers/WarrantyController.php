@@ -31,14 +31,76 @@ class WarrantyController extends Controller
 
     public function index()
     {
-        $tab=Invoice::join('customers','invoices.customer_id','=','customers.id')
+        /*$tab=Invoice::join('customers','invoices.customer_id','=','customers.id')
                      ->select('invoices.*','customers.name as customer_name')
                      ->where('invoices.store_id',$this->sdc->storeID())
                      ->take(100)
                      ->orderBy('invoices.id','DESC')
-                     ->get();
-        return view('apps.pages.warranty.list',['dataTable'=>$tab]);
+                     ->get();,['dataTable'=>$tab]*/
+        return view('apps.pages.warranty.list');
     }
+
+    private function methodToGetMembersCount($search=''){
+
+        $tab=Invoice::join('customers','invoices.customer_id','=','customers.id')
+                     ->select('invoices.id','invoices.invoice_id','invoices.total_amount','invoices.created_at','customers.name as customer_name')
+                     ->where('invoices.store_id',$this->sdc->storeID())->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('invoices.id','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.invoice_id','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.total_amount','LIKE','%'.$search.'%');
+                        $query->orWhere('customers.name','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.created_at','LIKE','%'.$search.'%');
+
+                        return $query;
+                     })
+
+                     ->count();
+        return $tab;
+    }
+
+    private function methodToGetMembers($start, $length,$search=''){
+
+        $tab=Invoice::join('customers','invoices.customer_id','=','customers.id')
+                     ->select('invoices.id','invoices.invoice_id','invoices.total_amount','invoices.created_at','customers.name as customer_name')
+                     ->where('invoices.store_id',$this->sdc->storeID())->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('invoices.id','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.invoice_id','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.total_amount','LIKE','%'.$search.'%');
+                        $query->orWhere('customers.name','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.created_at','LIKE','%'.$search.'%');
+
+                        return $query;
+                     })
+                     ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function datajson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->methodToGetMembersCount($search); // get your total no of data;
+        $members = $this->methodToGetMembers($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
+    }
+
 
     /**
      * Show the form for creating a new resource.
@@ -361,12 +423,71 @@ class WarrantyController extends Controller
      */
     public function show(Warranty $warranty)
     {
-        $tab=$warranty::select('id','invoice_id','warranty_date','warranty_batch_quantity','created_at')
+        /*$tab=Warranty::select('id','invoice_id','warranty_date','warranty_batch_quantity','created_at')
                      ->where('store_id',$this->sdc->storeID())
                      ->take(100)
                      ->orderBy('id','DESC')
-                     ->get();
-        return view('apps.pages.warranty.list-report',['dataTable'=>$tab]);
+                     ->get();,['dataTable'=>$tab]*/
+        return view('apps.pages.warranty.list-report');
+    }
+
+    private function methodToGetReportMembersCount($search=''){
+
+        $tab=Warranty::select('id','invoice_id','warranty_date','warranty_batch_quantity','created_at')
+                     ->where('store_id',$this->sdc->storeID())->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('id','LIKE','%'.$search.'%');
+                        $query->orWhere('invoice_id','LIKE','%'.$search.'%');
+                        $query->orWhere('warranty_date','LIKE','%'.$search.'%');
+                        $query->orWhere('warranty_batch_quantity','LIKE','%'.$search.'%');
+                        $query->orWhere('created_at','LIKE','%'.$search.'%');
+
+                        return $query;
+                     })
+
+                     ->count();
+        return $tab;
+    }
+
+    private function methodToGetReportMembers($start, $length,$search=''){
+
+        $tab=Warranty::select('id','invoice_id','warranty_date','warranty_batch_quantity','created_at')
+                     ->where('store_id',$this->sdc->storeID())->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('id','LIKE','%'.$search.'%');
+                        $query->orWhere('invoice_id','LIKE','%'.$search.'%');
+                        $query->orWhere('warranty_date','LIKE','%'.$search.'%');
+                        $query->orWhere('warranty_batch_quantity','LIKE','%'.$search.'%');
+                        $query->orWhere('created_at','LIKE','%'.$search.'%');
+
+                        return $query;
+                     })
+                     ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function dataReportjson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->methodToGetReportMembersCount($search); // get your total no of data;
+        $members = $this->methodToGetReportMembers($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
     }
 
     /**

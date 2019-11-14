@@ -33,6 +33,75 @@ class InStoreRepairController extends Controller
     private $sdc;
     public function __construct(){ $this->sdc = new StaticDataController(); }
 
+    private function datatableInstoreRepairCount($search=''){
+
+        $tab=InStoreRepair::leftjoin('invoices','in_store_repairs.invoice_id','=','invoices.invoice_id')
+                          ->select('in_store_repairs.id')
+                          ->where('in_store_repairs.store_id',$this->sdc->storeID())
+                          ->orderBy('in_store_repairs.id','DESC')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('in_store_repairs.id','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.product_name','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.payment_status','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.customer_name','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.price','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.imei','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.invoice_id','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.created_at','LIKE','%'.$search.'%');
+
+                            return $query;
+                          })
+
+                          ->count();
+        return $tab;
+    }
+
+    private function datatableInstoreRepair($start, $length,$search=''){
+
+        $tab=InStoreRepair::leftjoin('invoices','in_store_repairs.invoice_id','=','invoices.invoice_id')
+                          ->select('in_store_repairs.id','in_store_repairs.product_name','in_store_repairs.payment_status','in_store_repairs.customer_name','in_store_repairs.price','in_store_repairs.imei','in_store_repairs.invoice_id','in_store_repairs.created_at','invoices.invoice_status')
+                          ->where('in_store_repairs.store_id',$this->sdc->storeID())
+                          ->orderBy('in_store_repairs.id','DESC')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('in_store_repairs.id','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.product_name','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.payment_status','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.customer_name','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.price','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.imei','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.invoice_id','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.created_at','LIKE','%'.$search.'%');
+
+                            return $query;
+                          })
+
+                     ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function datatableInstoreRepairjson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->datatableInstoreRepairCount($search); // get your total no of data;
+        $members = $this->datatableInstoreRepair($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
+    }
 
     public function index()
     {
@@ -425,7 +494,7 @@ class InStoreRepairController extends Controller
 
         if(empty($invoice_id) && empty($customer_id) && empty($start_date) && empty($end_date) && empty($dateString))
         {
-            $invoice=InStoreRepair::select('id','product_name','payment_status','customer_name','price','imei','invoice_id','created_at')
+            /*$invoice=InStoreRepair::select('id','product_name','payment_status','customer_name','price','imei','invoice_id','created_at')
                      ->where('store_id',$this->sdc->storeID())
                      ->when($invoice_id, function ($query) use ($invoice_id) {
                             return $query->where('invoice_id','=', $invoice_id);
@@ -438,7 +507,9 @@ class InStoreRepairController extends Controller
                      })
                      ->orderBy('id','DESC')
                      ->take(100)
-                     ->get();
+                     ->get();*/
+
+            $invoice=array();
         }
         else
         {
@@ -473,6 +544,77 @@ class InStoreRepairController extends Controller
                 'start_date'=>$start_date,
                 'end_date'=>$end_date
             ]);
+    }
+
+
+    private function InstoreRepairReportPrCount($search=''){
+
+        $tab=InStoreRepair::leftjoin('invoices','in_store_repairs.invoice_id','=','invoices.invoice_id')
+                          ->select('in_store_repairs.id')
+                          ->where('in_store_repairs.store_id',$this->sdc->storeID())
+                          ->orderBy('in_store_repairs.id','DESC')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('in_store_repairs.id','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.product_name','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.payment_status','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.customer_name','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.price','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.imei','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.invoice_id','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.created_at','LIKE','%'.$search.'%');
+
+                            return $query;
+                          })
+
+                          ->count();
+        return $tab;
+    }
+
+    private function InstoreRepairReportPr($start, $length,$search=''){
+
+        $tab=InStoreRepair::leftjoin('invoices','in_store_repairs.invoice_id','=','invoices.invoice_id')
+                          ->select('in_store_repairs.id','in_store_repairs.product_name','in_store_repairs.payment_status','in_store_repairs.customer_name','in_store_repairs.price','in_store_repairs.imei','in_store_repairs.invoice_id','in_store_repairs.created_at','invoices.invoice_status')
+                          ->where('in_store_repairs.store_id',$this->sdc->storeID())
+                          ->orderBy('in_store_repairs.id','DESC')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('in_store_repairs.id','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.product_name','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.payment_status','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.customer_name','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.price','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.imei','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.invoice_id','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.created_at','LIKE','%'.$search.'%');
+
+                            return $query;
+                          })
+
+                     ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function InstoreRepairReportPrjson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->InstoreRepairReportPrCount($search); // get your total no of data;
+        $members = $this->InstoreRepairReportPr($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
     }
 
     /**
@@ -1936,7 +2078,7 @@ class InStoreRepairController extends Controller
 
         if(empty($invoice_id) && empty($customer_id) && empty($lcd_status) && empty($dateString))
         {
-            $invoice=InStoreRepair::select('id','product_name','payment_status','customer_name','price','imei','invoice_id','created_at','lcd_status')
+            /*$invoice=InStoreRepair::select('id','product_name','payment_status','customer_name','price','imei','invoice_id','created_at','lcd_status')
                      ->where('store_id',$this->sdc->storeID())
                      ->when($invoice_id, function ($query) use ($invoice_id) {
                             return $query->where('invoice_id','=', $invoice_id);
@@ -1952,7 +2094,9 @@ class InStoreRepairController extends Controller
                      })
                      ->orderBy('id','DESC')
                      ->take(100)
-                     ->get();
+                     ->get();*/
+
+            $invoice=array();
         }
         else
         {
@@ -1990,6 +2134,76 @@ class InStoreRepairController extends Controller
                 'end_date'=>$end_date,
                 'lcd_status'=>$lcd_status
             ]);
+    }
+
+    private function InstoreLCDRepairDRPCount($search=''){
+
+        $tab=InStoreRepair::leftjoin('invoices','in_store_repairs.invoice_id','=','invoices.invoice_id')
+                          ->select('in_store_repairs.id')
+                          ->where('in_store_repairs.store_id',$this->sdc->storeID())
+                          ->orderBy('in_store_repairs.id','DESC')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('in_store_repairs.id','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.product_name','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.payment_status','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.customer_name','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.price','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.imei','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.invoice_id','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.created_at','LIKE','%'.$search.'%');
+
+                            return $query;
+                          })
+
+                          ->count();
+        return $tab;
+    }
+
+    private function InstoreLCDRepairDRP($start, $length,$search=''){
+
+        $tab=InStoreRepair::leftjoin('invoices','in_store_repairs.invoice_id','=','invoices.invoice_id')
+                          ->select('in_store_repairs.id','in_store_repairs.product_name','in_store_repairs.payment_status','in_store_repairs.lcd_status','in_store_repairs.customer_name','in_store_repairs.price','in_store_repairs.imei','in_store_repairs.invoice_id','in_store_repairs.created_at','invoices.invoice_status')
+                          ->where('in_store_repairs.store_id',$this->sdc->storeID())
+                          ->orderBy('in_store_repairs.id','DESC')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('in_store_repairs.id','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.product_name','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.payment_status','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.customer_name','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.price','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.imei','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.invoice_id','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.created_at','LIKE','%'.$search.'%');
+
+                            return $query;
+                          })
+
+                     ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function InstoreLCDRepairDRPjson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->InstoreLCDRepairDRPCount($search); // get your total no of data;
+        $members = $this->InstoreLCDRepairDRP($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
     }
 
     public function LCDStatusQuery($request)
@@ -2211,7 +2425,7 @@ class InStoreRepairController extends Controller
 
         if(empty($invoice_id) && empty($customer_id) && empty($dateString))
         {
-            $invoice=InStoreRepair::select('id','product_name','payment_status','customer_name','price','imei','invoice_id','created_at','salvage_part')
+            /*$invoice=InStoreRepair::select('id','product_name','payment_status','customer_name','price','imei','invoice_id','created_at','salvage_part')
                      ->where('store_id',$this->sdc->storeID())
                      ->where('salvage_part','on')
                      ->when($invoice_id, function ($query) use ($invoice_id) {
@@ -2225,7 +2439,9 @@ class InStoreRepairController extends Controller
                      })
                      ->orderBy('id','DESC')
                      ->take(100)
-                     ->get();
+                     ->get();*/
+
+            $invoice=array();
         }
         else
         {
@@ -2260,6 +2476,78 @@ class InStoreRepairController extends Controller
                 'start_date'=>$start_date,
                 'end_date'=>$end_date
             ]);
+    }
+
+    private function InstoreSalvageRepairDRPCount($search=''){
+
+        $tab=InStoreRepair::leftjoin('invoices','in_store_repairs.invoice_id','=','invoices.invoice_id')
+                          ->select('in_store_repairs.id')
+                          ->where('in_store_repairs.store_id',$this->sdc->storeID())
+                          ->orderBy('in_store_repairs.id','DESC')
+                          ->where('in_store_repairs.salvage_part','on')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('in_store_repairs.id','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.product_name','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.payment_status','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.customer_name','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.price','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.imei','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.invoice_id','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.created_at','LIKE','%'.$search.'%');
+
+                            return $query;
+                          })
+
+                          ->count();
+        return $tab;
+    }
+
+    private function InstoreSalvageRepairDRP($start, $length,$search=''){
+
+        $tab=InStoreRepair::leftjoin('invoices','in_store_repairs.invoice_id','=','invoices.invoice_id')
+                          ->select('in_store_repairs.id','in_store_repairs.product_name','in_store_repairs.payment_status','in_store_repairs.salvage_part','in_store_repairs.customer_name','in_store_repairs.price','in_store_repairs.imei','in_store_repairs.invoice_id','in_store_repairs.created_at','invoices.invoice_status')
+                          ->where('in_store_repairs.store_id',$this->sdc->storeID())
+                          ->orderBy('in_store_repairs.id','DESC')
+                          ->where('in_store_repairs.salvage_part','on')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('in_store_repairs.id','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.product_name','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.payment_status','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.customer_name','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.price','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.imei','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.invoice_id','LIKE','%'.$search.'%');
+                            $query->orWhere('in_store_repairs.created_at','LIKE','%'.$search.'%');
+
+                            return $query;
+                          })
+
+                     ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function InstoreSalvageRepairDRPjson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->InstoreSalvageRepairDRPCount($search); // get your total no of data;
+        $members = $this->InstoreSalvageRepairDRP($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
     }
 
     public function SalvageQuery($request)

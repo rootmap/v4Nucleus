@@ -125,7 +125,7 @@
             </div>
             <div class="card-body collapse in">
                 <div class="table-responsive">
-                    <table class="table table-striped table-bordered zero-configuration">
+                    <table class="table table-striped table-bordered" id="report_table">
                         <thead>
                             <tr>
                                 <th>ID</th>
@@ -193,8 +193,114 @@
 </section>
 
 @endsection
-@section('counter-display-js')
-	<script type="text/javascript">
+
+
+@include('apps.include.datatablecssjs',['selectTwo'=>1,'dateDrop'=>1])
+@section('RoleWiseMenujs')
+   <script>
+
+   	function actionTemplate(id,hour_gone,refund_status){
+   		var strHTML='';
+   		if(hour_gone>24){
+	    	if(refund_status==1){
+	    	strHTML+='<button onclick="refundTransaction('+id+')" type="button" class="btn btn-green"  ';
+		    	@if($userguideInit==1) 
+		    		strHTML+='data-step="7" data-intro="Payment could be refund using click on this button." ';
+		    	@endif
+	    	strHTML+='><i class="icon-moneybag"></i> Refund Amount</button>';
+	    	}else{
+	    		strHTML+='	<button type="button" class="btn btn-green"><i class="icon-moneybag"></i> Refund Complete</button>';
+	    	}
+		}else{
+	    	if(refund_status==1){
+	    	strHTML+='<button onclick="VoidTransaction('+id+')" type="button" class="btn btn-green"  ';
+		    	@if($userguideInit==1) 
+		    		strHTML+='	data-step="7" data-intro="Payment could be refund/void using click on this button." ';
+		    	@endif
+	    	strHTML+='><i class="icon-moneybag"></i> VOID Transaction</button>';
+	    	}else{
+	    		strHTML+='	<button type="button" class="btn btn-green" ><i class="icon-moneybag"></i> VOID Complete</button>';
+	    	}
+		}
+
+		return strHTML;
+   	}
+	
+	$(document).ready(function(e){
+
+		var dataObj="";
+		function replaceNull(valH){
+			var returnHt='';
+
+			if(valH !== null && valH !== '') {
+					returnHt=valH;
+			}
+
+			return returnHt;
+		}
+
+		@if(!empty($start_date) || !empty($end_date) || !empty($invoice_id) || !empty($card_number))
+			@if(isset($dataTable))
+        		@if(count($dataTable)>0)
+        			$('#report_table').DataTable();
+        		@endif
+        	@endif
+        @else
+
+		$('#report_table').dataTable({
+			"bProcessing": true,
+         	"serverSide": true,
+         	"ajax":{
+	            url :"{{url('authorize/net/payment/data/json')}}",
+	            headers: {
+			        'X-CSRF-TOKEN':'{{csrf_token()}}',
+			    },
+	            type: "POST",
+	            complete:function(data){
+	            	console.log(data.responseJSON);
+	            	var totalData=data.responseJSON;
+	            	console.log(totalData.data);
+	            	var strHTML='';
+	            	var totalPrice=0;
+	            	$.each(totalData.data,function(key,row){
+	            		console.log(row);
+
+	            		strHTML+='<tr>';
+						strHTML+='		<td>'+row.id+'</td>';
+						strHTML+='		<td>'+row.invoice_id+'</td>';
+						strHTML+='		<td>'+formatDate(replaceNull(row.created_at))+'</td>';
+						strHTML+='		<td>'+replaceNull(row.card_number)+'</td>';
+						strHTML+='		<td>'+replaceNull(row.CardType)+'</td>';
+						strHTML+='		<td>'+replaceNull(row.transactionID)+'</td>';
+						strHTML+='		<td>'+replaceNull(row.paid_amount)+'</td>';
+						strHTML+='		<td>'+actionTemplate(row.id)+'</td>';
+						strHTML+='</tr>';
+
+						//totalPrice+=replaceNull(row.price)-0;
+
+	            	});
+
+	            	//$("#totalDataAmount").html(totalPrice);
+
+	            	$("tbody").html(strHTML);
+	            	$('#report_table').DataTable();
+	            },
+	            initComplete: function(settings, json) {
+				    alert( 'DataTables has finished its initialisation.' );
+				  },
+	            error: function(){
+	              $("#report_table_processing").css("display","none");
+	            }
+          	}
+        });
+
+        @endif
+	});
+
+
+    </script>
+
+    <script type="text/javascript">
 		function refundTransaction(id)
 		{
 			var c=confirm('Are you sure to refund this transaction ?');
@@ -255,5 +361,5 @@
 			}
 		}
 	</script>
+
 @endsection
-@include('apps.include.datatable',['JDataTable'=>1,'selectTwo'=>1,'dateDrop'=>1])

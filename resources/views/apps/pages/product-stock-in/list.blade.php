@@ -26,19 +26,19 @@
 
                 <div class="card-body collapse in">
                     <div class="table-responsive" style="min-height: 360px;">
-                        <table class="table table-striped table-bordered zero-configuration">
+                        <table class="table table-striped table-bordered" id="product_stockin_list">
                         <thead>
                             <tr>
                                 <th>ID</th>
                                 <th>Order ID</th>
                                 <th>Order Date</th>
-                                <th>Invoice Total Amount</th>
+                                <th>Invoice Total Quantity</th>
                                 <th>Supplier / Vendor</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @if(isset($dataTable))
+                            {{-- @if(isset($dataTable))
                             @foreach($dataTable as $row)
                             <tr>
                                 <td>{{$row->id}}</td>
@@ -68,7 +68,7 @@
                             <tr>
                                 <td colspan="6">No Record Found</td>
                             </tr>
-                            @endif
+                            @endif --}}
                         </tbody>
                     </table>
                 </div>
@@ -82,4 +82,91 @@
 
 @endsection
 
-@include('apps.include.datatable',['JDataTable'=>1])
+
+@include('apps.include.datatablecssjs')
+@section('RoleWiseMenujs')
+   <script>
+    
+    $(document).ready(function(e){
+        var productStockInView="{{url('product/stock/in/receipt')}}";
+        var productStockInEdit="{{url('product/stock/in/edit')}}";
+        var productStockInDelete="{{url('product/stock/in/delete')}}";
+
+        function actionTemplate(id){
+            var actHTml='';
+                actHTml+='<span class="dropdown" ';
+                @if($userguideInit==1) 
+                    actHTml+='data-step="2" data-intro="In this button You see product detail or edit or delete option." ';
+                @endif
+                actHTml+='>';
+                actHTml+='            <button id="btnSearchDrop4" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" class="btn btn-green dropdown-toggle dropdown-menu-right"><i class="icon-cog3"></i></button>';
+                actHTml+='            <span aria-labelledby="btnSearchDrop4" class="dropdown-menu mt-1 dropdown-menu-right">';
+                                @if(in_array('Stock_In_Order_List_Single_Order_View', $dataMenuAssigned))
+                actHTml+='       <a href="'+productStockInView+'/'+id+'" title="View Detail" class="dropdown-item"><i class="icon-clipboard2"></i> View Detail</a>';
+                                @endif
+                                @if(in_array('Stock_In_Order_List_Single_Order_edit', $dataMenuAssigned))
+                actHTml+='      <a href="'+productStockInEdit+'/'+id+'" title="Edit" class="dropdown-item"><i class="icon-pencil22"></i> Edit</a>';
+                                @endif
+                                @if(in_array('Stock_In_Order_List_Single_Order_Delete', $dataMenuAssigned))
+                actHTml+='      <a href="'+productStockInDelete+'/'+id+'" title="Delete" class="dropdown-item"><i class="icon-cross"></i> Delete</a>';
+                                @endif
+                actHTml+='  </span>';
+                actHTml+='</span>';
+
+                return actHTml;
+        }
+
+        
+        function replaceNull(valH){
+            var returnHt='';
+            if(valH !== null && valH !== '') {
+                    returnHt=valH;
+            }
+
+            return returnHt;
+        }
+
+        $('#product_stockin_list').dataTable({
+            "bProcessing": true,
+            "serverSide": true,
+            "ajax":{
+                url :"{{url('product/stock/in/data/json')}}",
+                headers: {
+                    'X-CSRF-TOKEN':'{{csrf_token()}}',
+                },
+                type: "POST",
+                complete:function(data){
+                    console.log(data.responseJSON);
+                    var totalData=data.responseJSON;
+                    console.log(totalData.data);
+                    var strHTML='';
+                    $.each(totalData.data,function(key,row){
+                        console.log(row);
+                        strHTML+='<tr>';
+                        strHTML+='      <td>'+row.id+'</td>';
+                        strHTML+='      <td>'+replaceNull(row.order_no)+'</td>';
+                        strHTML+='      <td>'+formatDate(replaceNull(row.order_date))+'</td>';
+                        strHTML+='      <td>'+number_format(replaceNull(row.total_quantity))+'</td>';
+                        strHTML+='      <td>'+replaceNull(row.vendor_name)+'</td>';
+                        strHTML+='      <td>'+actionTemplate(row.id)+'</td>';
+                        strHTML+='</tr>';
+                    });
+
+                    $("tbody").html(strHTML);
+
+                    $('#product_stockin_list').DataTable();
+                },
+                initComplete: function(settings, json) {
+                    alert( 'DataTables has finished its initialisation.' );
+                  },
+                error: function(){
+                  $("#product_stockin_list_processing").css("display","none");
+                }
+            }
+        });
+    });
+
+
+    </script>
+
+@endsection

@@ -86,10 +86,75 @@ class CustomerLeadController extends Controller
      * @param  \App\CustomerLead  $customerLead
      * @return \Illuminate\Http\Response
      */
+    private function methodToGetMembersCount($search=''){
+
+        $tab=CustomerLead::select('id','name','address','phone','email','lead_info','created_at')
+                     ->where('store_id',$this->sdc->storeID())->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('id','LIKE','%'.$search.'%');
+                        $query->orWhere('name','LIKE','%'.$search.'%');
+                        $query->orWhere('address','LIKE','%'.$search.'%');
+                        $query->orWhere('phone','LIKE','%'.$search.'%');
+                        $query->orWhere('email','LIKE','%'.$search.'%');
+                        $query->orWhere('lead_info','LIKE','%'.$search.'%');
+                        $query->orWhere('created_at','LIKE','%'.$search.'%');
+
+                        return $query;
+                     })
+
+                     ->count();
+        return $tab;
+    }
+
+    private function methodToGetMembers($start, $length,$search=''){
+
+        $tab=CustomerLead::select('id','name','address','phone','email','lead_info','created_at')
+                     ->where('store_id',$this->sdc->storeID())->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('id','LIKE','%'.$search.'%');
+                        $query->orWhere('name','LIKE','%'.$search.'%');
+                        $query->orWhere('address','LIKE','%'.$search.'%');
+                        $query->orWhere('phone','LIKE','%'.$search.'%');
+                        $query->orWhere('email','LIKE','%'.$search.'%');
+                        $query->orWhere('lead_info','LIKE','%'.$search.'%');
+                        $query->orWhere('created_at','LIKE','%'.$search.'%');
+
+                        return $query;
+                     })
+                     ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function datajson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->methodToGetMembersCount($search); // get your total no of data;
+        $members = $this->methodToGetMembers($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
+    }
+
+
+
     public function show(CustomerLead $customerLead)
     {
-        $tab=$customerLead::where('store_id',$this->sdc->storeID())->orderBy('id','DESC')->take(100)->get();
-        return view('apps.pages.customer.customer-lead-list',['dataTable'=>$tab]);
+        //$tab=$customerLead::where('store_id',$this->sdc->storeID())->orderBy('id','DESC')->take(100)->get();['dataTable'=>$tab]
+        return view('apps.pages.customer.customer-lead-list');
     }
 
     /**

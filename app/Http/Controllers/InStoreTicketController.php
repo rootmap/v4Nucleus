@@ -25,15 +25,87 @@ class InStoreTicketController extends Controller
     private $moduleName="Ticket Report ";
     private $sdc;
     public function __construct(){ $this->sdc = new StaticDataController(); }
+
+
+    private function datatableInstoreTicketCount($search=''){
+
+        $tab=InStoreTicket::select('id','product_name','customer_name','problem_name','payment_status','our_cost','retail_price','imei','invoice_id','created_at')
+                          ->where('store_id',$this->sdc->storeID())
+                          ->orderBy('id','DESC')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('id','LIKE','%'.$search.'%');
+                            $query->orWhere('product_name','LIKE','%'.$search.'%');
+                            $query->orWhere('customer_name','LIKE','%'.$search.'%');
+                            $query->orWhere('problem_name','LIKE','%'.$search.'%');
+                            $query->orWhere('payment_status','LIKE','%'.$search.'%');
+                            $query->orWhere('our_cost','LIKE','%'.$search.'%');
+                            $query->orWhere('retail_price','LIKE','%'.$search.'%');
+                            $query->orWhere('imei','LIKE','%'.$search.'%');
+                            $query->orWhere('invoice_id','LIKE','%'.$search.'%');
+                            $query->orWhere('created_at','LIKE','%'.$search.'%');
+
+                            return $query;
+                          })
+                          ->count();
+        return $tab;
+    }
+
+    private function datatableInstoreTicket($start, $length,$search=''){
+
+        $tab=InStoreTicket::select('id','product_name','customer_name','problem_name','payment_status','our_cost','retail_price','imei','invoice_id','created_at')
+                          ->where('store_id',$this->sdc->storeID())
+                          ->orderBy('id','DESC')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('id','LIKE','%'.$search.'%');
+                            $query->orWhere('product_name','LIKE','%'.$search.'%');
+                            $query->orWhere('customer_name','LIKE','%'.$search.'%');
+                            $query->orWhere('problem_name','LIKE','%'.$search.'%');
+                            $query->orWhere('payment_status','LIKE','%'.$search.'%');
+                            $query->orWhere('our_cost','LIKE','%'.$search.'%');
+                            $query->orWhere('retail_price','LIKE','%'.$search.'%');
+                            $query->orWhere('imei','LIKE','%'.$search.'%');
+                            $query->orWhere('invoice_id','LIKE','%'.$search.'%');
+                            $query->orWhere('created_at','LIKE','%'.$search.'%');
+
+                            return $query;
+                          })
+                          ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function datatableInstoreTicketjson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->datatableInstoreTicketCount($search); // get your total no of data;
+        $members = $this->datatableInstoreTicket($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
+    }
+
     public function index()
     {
-        $invoice=InStoreTicket::select('id','product_name','customer_name','problem_name','payment_status','our_cost','retail_price','imei','invoice_id','created_at')
+        /*$invoice=InStoreTicket::select('id','product_name','customer_name','problem_name','payment_status','our_cost','retail_price','imei','invoice_id','created_at')
                               ->where('store_id',$this->sdc->storeID())
                               ->orderBy('id','DESC')
                               ->take(100)
-                              ->get();
+                              ->get();,compact('invoice')*/
 
-        return view('apps.pages.ticket.list',compact('invoice'));
+        return view('apps.pages.ticket.list');
     }
     public function report(Request $request)
     {
@@ -80,7 +152,7 @@ class InStoreTicketController extends Controller
 
         if(empty($invoice_id) && empty($customer_id) && empty($start_date) && empty($end_date) && empty($dateString))
         {
-            $invoice=InStoreTicket::select('id','product_name','customer_name','payment_status','our_cost','retail_price','imei','invoice_id','created_at')
+            /*$invoice=InStoreTicket::select('id','product_name','customer_name','payment_status','our_cost','retail_price','imei','invoice_id','created_at')
                      ->where('store_id',$this->sdc->storeID())
                      ->when($invoice_id, function ($query) use ($invoice_id) {
                             return $query->where('invoice_id','=', $invoice_id);
@@ -93,7 +165,9 @@ class InStoreTicketController extends Controller
                      })
                      ->orderBy('id','DESC')
                      ->take(100)
-                     ->get();
+                     ->get();*/
+
+            $invoice=array();
         }
         else
         {
@@ -128,6 +202,72 @@ class InStoreTicketController extends Controller
                 'start_date'=>$start_date,
                 'end_date'=>$end_date
             ]);
+    }
+
+    private function inStoreTicketPRCount($search=''){
+
+        $tab=InStoreTicket::select('id','product_name','customer_name','payment_status','our_cost','retail_price','imei','invoice_id','created_at')
+                          ->where('store_id',$this->sdc->storeID())
+                          ->orderBy('id','DESC')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('id','LIKE','%'.$search.'%');
+                            $query->orWhere('product_name','LIKE','%'.$search.'%');
+                            $query->orWhere('customer_name','LIKE','%'.$search.'%');
+                            $query->orWhere('payment_status','LIKE','%'.$search.'%');
+                            $query->orWhere('our_cost','LIKE','%'.$search.'%');
+                            $query->orWhere('retail_price','LIKE','%'.$search.'%');
+                            $query->orWhere('imei','LIKE','%'.$search.'%');
+                            $query->orWhere('invoice_id','LIKE','%'.$search.'%');
+                            $query->orWhere('created_at','LIKE','%'.$search.'%');
+                            return $query;
+                          })
+                          ->count();
+        return $tab;
+    }
+
+    private function inStoreTicketPR($start, $length,$search=''){
+
+        $tab=InStoreTicket::select('id','product_name','customer_name','payment_status','our_cost','retail_price','imei','invoice_id','created_at')
+                          ->where('store_id',$this->sdc->storeID())
+                          ->orderBy('id','DESC')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('id','LIKE','%'.$search.'%');
+                            $query->orWhere('product_name','LIKE','%'.$search.'%');
+                            $query->orWhere('customer_name','LIKE','%'.$search.'%');
+                            $query->orWhere('payment_status','LIKE','%'.$search.'%');
+                            $query->orWhere('our_cost','LIKE','%'.$search.'%');
+                            $query->orWhere('retail_price','LIKE','%'.$search.'%');
+                            $query->orWhere('imei','LIKE','%'.$search.'%');
+                            $query->orWhere('invoice_id','LIKE','%'.$search.'%');
+                            $query->orWhere('created_at','LIKE','%'.$search.'%');
+                            return $query;
+                          })
+                          ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function inStoreTicketPRjson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->inStoreTicketPRCount($search); // get your total no of data;
+        $members = $this->inStoreTicketPR($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
     }
 
     /**

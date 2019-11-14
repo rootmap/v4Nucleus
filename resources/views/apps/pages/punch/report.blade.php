@@ -109,7 +109,7 @@
 
                 <div class="card-body collapse in">
                     <div class="table-responsive">
-                        <table class="table table-striped table-bordered zero-configuration">
+                        <table class="table table-striped table-bordered" id="cashierPunch_list">
                         <thead>
                             <tr>
                                 <th>ID</th>
@@ -133,7 +133,9 @@
                                 <td>{{formatDate($row->out_date)}}</td>
                                 <td>{{$row->out_time}}</td>
                                 <td>{{($row->elapsed_time)}}</td>
-                                <td><a href="{{url('attendance/punch/edit/'.$row->id)}}" class="btn btn-green" @if($userguideInit==1) data-step="7" data-intro="Employee/user punch can be edit using this click on this button" @endif><i class="icon-edit"></i> Edit</a></td>
+                                <td>
+                                    <a href="{{url('attendance/punch/edit/'.$row->id)}}" class="btn btn-green" @if($userguideInit==1) data-step="7" data-intro="Employee/user punch can be edit using this click on this button" @endif><i class="icon-edit"></i> Edit</a>
+                                </td>
                             </tr>
                             @endforeach
                             @else
@@ -154,4 +156,95 @@
 
 @endsection
 
-@include('apps.include.datatable',['JDataTable'=>1,'dateDrop'=>1])
+@include('apps.include.datatablecssjs',['selectTwo'=>1,'dateDrop'=>1])
+@section('RoleWiseMenujs')
+   <script>
+    
+    $(document).ready(function(e){
+
+        var dataObj="";
+        function replaceNull(valH){
+            var returnHt='';
+
+            if(valH !== null && valH !== '') {
+                    returnHt=valH;
+            }
+
+            return returnHt;
+        }
+
+        var punchEdit="{{url('attendance/punch/edit')}}";
+
+        function actionTemplate(id){
+            var strHTML='';
+                strHTML+='<a href="'+punchEdit+'/'+id+'" class="btn btn-green" ';
+                @if($userguideInit==1) 
+                    strHTML+='data-step="7" data-intro="Employee/user punch can be edit using this click on this button" ';
+                @endif
+                strHTML+='><i class="icon-edit"></i> Edit</a>';
+
+                return strHTML;
+        }
+
+        @if(!empty($start_date) || !empty($end_date) || !empty($user_id))
+            @if(isset($dataTable))
+                @if(count($dataTable)>0)
+                    $('#cashierPunch_list').DataTable();
+                @endif
+            @endif
+        @else
+
+        $('#cashierPunch_list').dataTable({
+            "bProcessing": true,
+            "serverSide": true,
+            "ajax":{
+                url :"{{url('attendance/punch/data/json')}}",
+                headers: {
+                    'X-CSRF-TOKEN':'{{csrf_token()}}',
+                },
+                type: "POST",
+                complete:function(data){
+                    console.log(data.responseJSON);
+                    var totalData=data.responseJSON;
+                    console.log(totalData.data);
+                    var strHTML='';
+                    var totalPrice=0;
+                    $.each(totalData.data,function(key,row){
+                        console.log(row);
+
+                        strHTML+='<tr>';
+                        strHTML+='      <td>'+row.id+'</td>';
+                        strHTML+='      <td>'+row.name+'</td>';
+                        strHTML+='      <td>'+formatDate(replaceNull(row.in_date))+'</td>';
+                        strHTML+='      <td>'+replaceNull(row.in_time)+'</td>';
+                        strHTML+='      <td>'+formatDate(replaceNull(row.out_date))+'</td>';
+                        strHTML+='      <td>'+replaceNull(row.out_time)+'</td>';
+                        strHTML+='      <td>'+replaceNull(row.elapsed_time)+'</td>';
+                        strHTML+='      <td>'+actionTemplate(row.id)+'</td>';
+                        strHTML+='</tr>';
+
+                        //totalPrice+=replaceNull(row.price)-0;
+
+                    });
+
+                    //$("#totalDataAmount").html(totalPrice);
+
+                    $("tbody").html(strHTML);
+                    $('#cashierPunch_list').DataTable();
+                },
+                initComplete: function(settings, json) {
+                    alert( 'DataTables has finished its initialisation.' );
+                  },
+                error: function(){
+                  $("#cashierPunch_list_processing").css("display","none");
+                }
+            }
+        });
+
+        @endif
+    });
+
+
+    </script>
+
+@endsection

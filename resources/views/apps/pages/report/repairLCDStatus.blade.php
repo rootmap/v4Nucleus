@@ -133,12 +133,12 @@
 			</div>
 			<div class="card-body collapse in">
 				<div class="table-responsive">
-					<table class="table table-striped table-bordered zero-configuration">
+					<table class="table table-striped table-bordered" id="report_table">
 						<thead>
 							<tr>
 								<th>Id</th>
 								<th>Date</th>
-								<th>Customer</th>
+								<th width="250">Customer</th>
 								<th>Repair Detail</th>
 								<th>Price</th>
 								<th>LCD Status</th>
@@ -194,21 +194,21 @@
 
 						<div class="col-lg-4 col-sm-4 border-right-blue bg-blue border-right-lighten-4">
                             <div class="card-block text-xs-center">
-                                <h1 class="display-4 white"><i class="icon-money font-large-2"></i> ${{$paid_amount}}</h1>
+                                <h1 class="display-4 white"><i class="icon-money font-large-2"></i> $<span id="totalPaidAmount">{{$paid_amount}}</span></h1>
                                 <span class="white">Total Paid Amount</span>
                             </div>
                         </div>
 
                         <div class="col-lg-4 col-sm-4 border-right-blue bg-green bg-darken-2 border-right-lighten-4">
                             <div class="card-block text-xs-center">
-                                <h1 class="display-4 white">{{$good_amount}}</h1>
+                                <h1 class="display-4 white"><span id="totalGoodLCD">{{$good_amount}}</span></h1>
                                 <span class="white">Good LCD</span>
                             </div>
                         </div>
 
                         <div class="col-lg-4 col-sm-4 border-right-blue bg-green  bg-lighten-2 border-right-lighten-4">
                             <div class="card-block text-xs-center">
-                                <h1 class="display-4 white"> {{$bad_amount}}</h1>
+                                <h1 class="display-4 white"><span id="totalBadLCD">{{$bad_amount}}</span></h1>
                                 <span class="white">Bad LCD</span>
                             </div>
                         </div>
@@ -227,5 +227,95 @@
 </section>
 @endsection
 
+@include('apps.include.datatablecssjs',['selectTwo'=>1,'dateDrop'=>1])
+@section('RoleWiseMenujs')
+   <script>
+	
+	$(document).ready(function(e){
 
-@include('apps.include.datatable',['JDataTable'=>1,'selectTwo'=>1,'dateDrop'=>1])
+		var dataObj="";
+		function replaceNull(valH){
+			var returnHt='';
+
+			if(valH !== null && valH !== '') {
+					returnHt=valH;
+			}
+
+			return returnHt;
+		}
+
+		@if(!empty($start_date) || !empty($end_date) || !empty($invoice_id) || !empty($customer_id) || !empty($lcd_status))
+			@if(isset($invoice))
+        		@if(count($invoice)>0)
+        			$('#report_table').DataTable();
+        		@endif
+        	@endif
+        @else
+
+		$('#report_table').dataTable({
+			"bProcessing": true,
+         	"serverSide": true,
+         	"ajax":{
+	            url :"{{url('lcd/status/data/report/json')}}",
+	            headers: {
+			        'X-CSRF-TOKEN':'{{csrf_token()}}',
+			    },
+	            type: "POST",
+	            complete:function(data){
+	            	console.log(data.responseJSON);
+	            	var totalData=data.responseJSON;
+	            	console.log(totalData.data);
+	            	var strHTML='';
+	            	var totalPrice=0;
+	            	var totalGood=0;
+	            	var totalBad=0;
+	            	$.each(totalData.data,function(key,row){
+	            		console.log(row);
+	            		strHTML+='<tr>';
+						strHTML+='		<td>'+row.id+'</td>';
+						strHTML+='		<td>'+formatDate(replaceNull(row.created_at))+'</td>';
+						strHTML+='		<td>'+replaceNull(row.customer_name)+'</td>';
+						strHTML+='		<td>'+replaceNull(row.product_name)+'</td>';
+						strHTML+='		<td>'+number_format(replaceNull(row.price))+'</td>';
+						strHTML+='		<td>'+replaceNull(row.lcd_status)+'</td>';
+						strHTML+='		<td>'+replaceNull(row.payment_status)+'</td>';
+						strHTML+='		<td>'+replaceNull(row.invoice_id)+'</td>';						
+						strHTML+='</tr>';
+
+						if(row.lcd_status=="Good")
+						{
+							totalGood+=1-0;
+						}
+						
+						if(row.lcd_status=="Bad")
+						{
+							totalBad+=1-0;
+						}
+
+						totalPrice+=number_format(replaceNull(row.price))-0;
+
+	            	});
+
+	            	$("#totalPaidAmount").html(number_format(totalPrice));
+	            	$("#totalGoodLCD").html(number_format(totalGood));
+	            	$("#totalBadLCD").html(number_format(totalBad));
+
+	            	$("tbody").html(strHTML);
+	            	$('#report_table').DataTable();
+	            },
+	            initComplete: function(settings, json) {
+				    alert( 'DataTables has finished its initialisation.' );
+				  },
+	            error: function(){
+	              $("#report_table_processing").css("display","none");
+	            }
+          	}
+        });
+
+        @endif
+	});
+
+
+    </script>
+
+@endsection

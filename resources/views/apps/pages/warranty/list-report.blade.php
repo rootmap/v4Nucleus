@@ -24,7 +24,7 @@
 
                 <div class="card-body collapse in">
                     <div class="table-responsive" style="min-height: 360px;">
-                        <table class="table table-striped table-bordered zero-configuration">
+                        <table class="table table-striped table-bordered" id="warranty_invoice">
                         <thead>
                             <tr>
                                 <th>WARRANTY BATCH ID</th>
@@ -34,7 +34,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @if(isset($dataTable))
+                            {{-- @if(isset($dataTable))
                             @foreach($dataTable as $row)
                             <tr>
                                 <td>{{$row->id}}</td>
@@ -50,7 +50,7 @@
                             <tr>
                                 <td colspan="6">No Record Found</td>
                             </tr>
-                            @endif
+                            @endif --}}
                         </tbody>
                     </table>
                 </div>
@@ -65,4 +65,73 @@
 </section>
 @endsection
 
-@include('apps.include.datatable',['JDataTable'=>1])
+
+@include('apps.include.datatablecssjs')
+@section('RoleWiseMenujs')
+   <script>
+    
+    $(document).ready(function(e){
+        var customerEditLink="{{url('warranty/view')}}";
+
+        function actionTemplate(id){
+            var actHTml='';
+                actHTml+='<a href="'+customerEditLink+'/'+id+'"  title="Detail View" class="btn btn-green"><i class="icon-book"></i> See Detail</a>';
+
+                return actHTml;
+        }
+
+        function replaceNull(valH){
+            var returnHt='';
+
+            if(valH !== null && valH !== '') {
+                    returnHt=valH;
+                
+                
+            }
+
+            return returnHt;
+        }
+
+        $('#warranty_invoice').dataTable({
+            "bProcessing": true,
+            "serverSide": true,
+            "ajax":{
+                url :"{{url('warranty/report/json')}}",
+                headers: {
+                    'X-CSRF-TOKEN':'{{csrf_token()}}',
+
+                },
+                type: "POST",
+                complete:function(data){
+                    console.log(data.responseJSON);
+                    var totalData=data.responseJSON;
+                    console.log(totalData.data);
+                    var strHTML='';
+                    $.each(totalData.data,function(key,row){
+                        console.log(row);
+                        strHTML+='<tr>';
+                        strHTML+='      <td>'+row.id+'</td>';
+                        strHTML+='      <td>'+formatDate(row.created_at)+'</td>';
+                        strHTML+='      <td>'+replaceNull(row.warranty_batch_quantity)+'</td>';
+                        strHTML+='      <td>'+actionTemplate(row.id)+'</td>';
+                        strHTML+='</tr>';
+                    });
+
+                    $("tbody").html(strHTML);
+
+                    $('#warranty_invoice').DataTable();
+                },
+                initComplete: function(settings, json) {
+                    alert( 'DataTables has finished its initialisation.' );
+                  },
+                error: function(){
+                  $("#warranty_invoice_processing").css("display","none");
+                }
+            }
+        });
+    });
+
+
+    </script>
+
+@endsection

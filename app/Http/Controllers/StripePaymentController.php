@@ -91,6 +91,66 @@ class StripePaymentController extends Controller
         return back();
     }*/
 
+    private function methodToGetMembersCount($search=''){
+
+        $tab=StripeTransactionHistory::select('id','invoice_id','created_at',\DB::Raw('SUBSTRING(card_number,-4) as card_number'),\DB::Raw('(HOUR(TIMEDIFF(NOW(),created_at))) AS hour_gone'),'CardType','transactionID','paid_amount','refund_status')
+                     ->where('store_id',$this->sdc->storeID())
+                     ->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('id','LIKE','%'.$search.'%');
+                        $query->orWhere('invoice_id','LIKE','%'.$search.'%');
+                        $query->orWhere('created_at','LIKE','%'.$search.'%');
+                        $query->orWhere(\DB::Raw('SUBSTRING(card_number,-4) as card_number'),'LIKE','%'.$search.'%');
+                        $query->orWhere('CardType','LIKE','%'.$search.'%');
+                        $query->orWhere('transactionID','LIKE','%'.$search.'%');
+                        return $query;
+                     })
+                     ->count();
+        return $tab;
+    }
+
+    private function methodToGetMembers($start, $length,$search=''){
+
+        $tab=StripeTransactionHistory::select('id','invoice_id','created_at',\DB::Raw('SUBSTRING(card_number,-4) as card_number'),\DB::Raw('(HOUR(TIMEDIFF(NOW(),created_at))) AS hour_gone'),'CardType','transactionID','paid_amount','refund_status')
+                     ->where('store_id',$this->sdc->storeID())
+                     ->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('id','LIKE','%'.$search.'%');
+                        $query->orWhere('invoice_id','LIKE','%'.$search.'%');
+                        $query->orWhere('created_at','LIKE','%'.$search.'%');
+                        $query->orWhere(\DB::Raw('SUBSTRING(card_number,-4) as card_number'),'LIKE','%'.$search.'%');
+                        $query->orWhere('CardType','LIKE','%'.$search.'%');
+                        $query->orWhere('transactionID','LIKE','%'.$search.'%');
+                        return $query;
+                     })
+                     ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function datajson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->methodToGetMembersCount($search); // get your total no of data;
+        $members = $this->methodToGetMembers($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
+    }
+
     public function show(request $request)
     {
         $invoice_id='';
@@ -142,7 +202,7 @@ class StripePaymentController extends Controller
 
         if(empty($invoice_id) && empty($start_date) && empty($end_date) && empty($card_number) && empty($dateString))
         {
-            $tab=StripeTransactionHistory::select('stripe_transaction_histories.*')
+            /*$tab=StripeTransactionHistory::select('stripe_transaction_histories.*')
                      ->where('stripe_transaction_histories.store_id',$this->sdc->storeID())
                      ->when($invoice_id, function ($query) use ($invoice_id) {
                             return $query->where('stripe_transaction_histories.invoice_id','=', $invoice_id);
@@ -158,7 +218,9 @@ class StripePaymentController extends Controller
                      })
                      ->orderBy("stripe_transaction_histories.id","DESC")
                      ->take(100)
-                     ->get();
+                     ->get();*/
+
+            $tab=array();
         }
         else
         {

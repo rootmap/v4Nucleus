@@ -97,10 +97,77 @@ class SpecialPartsOrderController extends Controller
      * @param  \App\CustomerLead  $customerLead
      * @return \Illuminate\Http\Response
      */
+
+    private function methodToGetMembersCount($search=''){
+
+        $tab=SpecialPartsOrder::select('id','ticket_id','ticket_payment_status','customer_name','description','ordered','order_status','created_at')
+                     ->where('store_id',$this->sdc->storeID())->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('id','LIKE','%'.$search.'%');
+                        $query->orWhere('ticket_id','LIKE','%'.$search.'%');
+                        $query->orWhere('ticket_payment_status','LIKE','%'.$search.'%');
+                        $query->orWhere('customer_name','LIKE','%'.$search.'%');
+                        $query->orWhere('description','LIKE','%'.$search.'%');
+                        $query->orWhere('ordered','LIKE','%'.$search.'%');
+                        $query->orWhere('order_status','LIKE','%'.$search.'%');
+                        $query->orWhere('created_at','LIKE','%'.$search.'%');
+
+                        return $query;
+                     })
+
+                     ->count();
+        return $tab;
+    }
+
+    private function methodToGetMembers($start, $length,$search=''){
+
+        $tab=SpecialPartsOrder::select('id','ticket_id','ticket_payment_status','customer_name','description','ordered','order_status','created_at')
+                     ->where('store_id',$this->sdc->storeID())->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('id','LIKE','%'.$search.'%');
+                        $query->orWhere('ticket_id','LIKE','%'.$search.'%');
+                        $query->orWhere('ticket_payment_status','LIKE','%'.$search.'%');
+                        $query->orWhere('customer_name','LIKE','%'.$search.'%');
+                        $query->orWhere('description','LIKE','%'.$search.'%');
+                        $query->orWhere('ordered','LIKE','%'.$search.'%');
+                        $query->orWhere('order_status','LIKE','%'.$search.'%');
+                        $query->orWhere('created_at','LIKE','%'.$search.'%');
+
+                        return $query;
+                     })
+                     ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function datajson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->methodToGetMembersCount($search); // get your total no of data;
+        $members = $this->methodToGetMembers($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
+    }
+
+
     public function show(SpecialPartsOrder $SpecialPartsOrder)
     {
-        $tab=$SpecialPartsOrder::where('store_id',$this->sdc->storeID())->orderBy('id','DESC')->take(100)->get();
-        return view('apps.pages.orderparts.list',['dataTable'=>$tab]);
+        //$tab=$SpecialPartsOrder::where('store_id',$this->sdc->storeID())->orderBy('id','DESC')->take(100)->get();,['dataTable'=>$tab]
+        return view('apps.pages.orderparts.list');
     }
 
     /**

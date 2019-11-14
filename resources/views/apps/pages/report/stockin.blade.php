@@ -117,7 +117,7 @@
 
                 <div class="card-body collapse in">
                     <div class="table-responsive" style="min-height: 360px;">
-                        <table class="table table-striped table-bordered zero-configuration">
+                        <table class="table table-striped table-bordered" id="report_table">
                         <thead>
                             <tr>
                                 <th>ID</th>
@@ -125,7 +125,7 @@
                                 <th>Order Date</th>
                                 <th>Invoice Total Quantity</th>
                                 <th>Created At</th>
-                                <th>Created By</th>
+                                <th>Vendor</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -140,7 +140,7 @@
                                 <td>{{formatDate($row->order_date)}}</td>
                                 <td>{{$row->total_quantity}}</td>
                                 <td>{{formatDateTime($row->created_at)}}</td>
-                                <td>{{$row->created_by}}</td>
+                                <td>{{$row->vendor_name}}</td>
                             </tr>
                             <?php $total_quantity+=$row->total_quantity; ?>
                             @endforeach
@@ -156,7 +156,7 @@
         </div>
         <div class="col-lg-3 col-sm-12 border-right-pink bg-green border-right-lighten-3">
             <div class="card-block text-xs-center">
-                <h1 class="display-3 white"><i class="icon-stack font-large-2"></i> {{$total_quantity}}</h1>
+                <h1 class="display-3 white"><i class="icon-stack font-large-2"></i> <span id="totalWER_quantity">{{$total_quantity}}</span></h1>
                 <span class="white">Total Stockin Quantity</span>
             </div>
         </div>
@@ -168,4 +168,81 @@
 
 @endsection
 
-@include('apps.include.datatable',['JDataTable'=>1,'selectTwo'=>1,'dateDrop'=>1])
+
+@include('apps.include.datatablecssjs',['selectTwo'=>1,'dateDrop'=>1])
+@section('RoleWiseMenujs')
+   <script>
+    
+    $(document).ready(function(e){
+
+        var dataObj="";
+        function replaceNull(valH){
+            var returnHt='';
+
+            if(valH !== null && valH !== '') {
+                    returnHt=valH;
+            }
+
+            return returnHt;
+        }
+
+
+        @if(!empty($start_date) || !empty($end_date) || !empty($order_no) || !empty($vendor_id))
+            @if(isset($dataTable))
+                @if(count($dataTable)>0)
+                    $('#report_table').DataTable();
+                @endif
+            @endif
+        @else
+
+        $('#report_table').dataTable({
+            "bProcessing": true,
+            "serverSide": true,
+            "ajax":{
+                url :"{{url('product/stock/in/data/report/json')}}",
+                headers: {
+                    'X-CSRF-TOKEN':'{{csrf_token()}}',
+                },
+                type: "POST",
+                complete:function(data){
+                    console.log(data.responseJSON);
+                    var totalData=data.responseJSON;
+                    console.log(totalData.data);
+                    var strHTML='';
+                    var totalQRT=0;
+                    var totalClosing=0;
+                    $.each(totalData.data,function(key,row){
+                        console.log(row);
+                        strHTML+='<tr>';
+                        strHTML+='      <td>'+row.id+'</td>';
+                        strHTML+='      <td>'+replaceNull(row.order_no)+'</td>';
+                        strHTML+='      <td>'+formatDate(replaceNull(row.order_date))+'</td>';
+                        strHTML+='      <td>'+number_format(replaceNull(row.total_quantity))+'</td>';
+                        strHTML+='      <td>'+formatDate(replaceNull(row.created_at))+'</td>';
+                        strHTML+='      <td>'+replaceNull(row.vendor_name)+'</td>';                                        
+                        strHTML+='</tr>';
+
+                        totalQRT+=row.total_quantity-0;
+                    });
+
+                    $("#totalWER_quantity").html(number_format(totalQRT));
+
+                    $("#report_table").find("tbody").html(strHTML);
+                    $('#report_table').DataTable();
+                },
+                initComplete: function(settings, json) {
+                    alert( 'DataTables has finished its initialisation.' );
+                  },
+                error: function(){
+                  $("#report_table_processing").css("display","none");
+                }
+            }
+        });
+
+        @endif
+    });
+
+
+    </script>
+
+@endsection

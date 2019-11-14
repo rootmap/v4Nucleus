@@ -197,10 +197,69 @@ class ProductVarianceController extends Controller
      * @param  \App\ProductVariance  $productVariance
      * @return \Illuminate\Http\Response
      */
+
+
+        private function datatableProductVarianceCount($search=''){
+
+        $tab=ProductVariance::select('id','variance_id','created_at','total_variance_quantity')
+                          ->where('store_id',$this->sdc->storeID())
+                          ->orderBy('id','DESC')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('id','LIKE','%'.$search.'%');
+                            $query->orWhere('variance_id','LIKE','%'.$search.'%');
+                            $query->orWhere('created_at','LIKE','%'.$search.'%');
+                            $query->orWhere('total_variance_quantity','LIKE','%'.$search.'%');
+                            return $query;
+                          })
+                          ->count();
+        return $tab;
+    }
+
+    private function datatableProductVariance($start, $length,$search=''){
+
+        $tab=ProductVariance::select('id','variance_id','created_at','total_variance_quantity')
+                          ->where('store_id',$this->sdc->storeID())
+                          ->orderBy('id','DESC')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('id','LIKE','%'.$search.'%');
+                            $query->orWhere('variance_id','LIKE','%'.$search.'%');
+                            $query->orWhere('created_at','LIKE','%'.$search.'%');
+                            $query->orWhere('total_variance_quantity','LIKE','%'.$search.'%');
+                            return $query;
+                          })
+                          ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function datatableVendorjson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->datatableProductVarianceCount($search); // get your total no of data;
+        $members = $this->datatableProductVariance($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
+    }
+
+
     public function show(ProductVariance $productVariance)
     {
-        $tab=$productVariance::where('store_id',$this->sdc->storeID())->get();
-        return view('apps.pages.variance.list',['dataTable'=>$tab]);
+        /*$tab=$productVariance::where('store_id',$this->sdc->storeID())->get();,['dataTable'=>$tab]*/
+        return view('apps.pages.variance.list');
     }
 
     /**

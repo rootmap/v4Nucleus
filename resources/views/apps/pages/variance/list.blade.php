@@ -29,7 +29,7 @@
 
                 <div class="card-body collapse in">
                     <div class="table-responsive" style="overflow:visible;">
-                        <table class="table table-striped table-bordered zero-configuration">
+                        <table class="table table-striped table-bordered" id="variance_report_list">
                         <thead>
                             <tr>
                                 <th>ID</th>
@@ -40,7 +40,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @if(isset($dataTable))
+                            {{-- @if(isset($dataTable))
                             @foreach($dataTable as $row)
                             <tr>
                                 <td>{{$row->id}}</td>
@@ -73,7 +73,7 @@
                             <tr>
                                 <td colspan="6">No Record Found</td>
                             </tr>
-                            @endif
+                            @endif --}}
                         </tbody>
                     </table>
                 </div>
@@ -87,4 +87,96 @@
 
 @endsection
 
-@include('apps.include.datatable',['JDataTable'=>1])
+
+@include('apps.include.datatablecssjs')
+@section('RoleWiseMenujs')
+   <script>
+    
+    $(document).ready(function(e){
+
+        var varianceReportView="{{url('variance/products/report')}}";
+        var varianceReportEdit="{{url('variance/edit')}}";
+        var varianceReportDelete="{{url('variance/delete')}}";
+
+        function actionTemplate(id){
+            var actHTml='';
+               
+                actHTml+='<span class="dropdown" ';
+                   @if($userguideInit==1) 
+                actHTml+='   data-step="2" data-intro="In this button You see view report or edit or delete option." ';
+                   @endif
+                actHTml+='   >';
+                actHTml+='        <button id="btnSearchDrop4" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" class="btn btn-green dropdown-toggle dropdown-menu-right"><i class="icon-cog3"></i></button>';
+                actHTml+='        <span aria-labelledby="btnSearchDrop4" class="dropdown-menu mt-1 dropdown-menu-right">';
+                            
+                            @if(in_array('Variance_List_View_Detail', $dataMenuAssigned)) 
+                actHTml+='  <a href="'+varianceReportView+'/'+id+'" title="View Report" class="dropdown-item"><i class="icon-clipboard2"></i> View Report</a> ';
+                            @endif 
+                            
+                            @if(in_array('Variance_List_View_Edit', $dataMenuAssigned))
+                actHTml+='  <a href="'+varianceReportEdit+'/'+id+'" title="Edit" class="dropdown-item"><i class="icon-pencil22"></i> Edit</a>';
+                            @endif
+
+                            @if(in_array('Variance_List_View_Delete', $dataMenuAssigned))
+                actHTml+='  <a href="'+varianceReportDelete+'/'+id+'" title="Delete" class="dropdown-item"><i class="icon-cross"></i> Delete</a>';
+                            @endif
+
+                actHTml+='        </span>';
+                actHTml+='    </span>';
+
+                return actHTml;
+        }
+
+        
+        function replaceNull(valH){
+            var returnHt='';
+            if(valH !== null && valH !== '') {
+                    returnHt=valH;
+            }
+
+            return returnHt;
+        }
+
+        $('#variance_report_list').dataTable({
+            "bProcessing": true,
+            "serverSide": true,
+            "ajax":{
+                url :"{{url('variance/data/report/json')}}",
+                headers: {
+                    'X-CSRF-TOKEN':'{{csrf_token()}}',
+                },
+                type: "POST",
+                complete:function(data){
+                    console.log(data.responseJSON);
+                    var totalData=data.responseJSON;
+                    console.log(totalData.data);
+                    var strHTML='';
+                    $.each(totalData.data,function(key,row){
+                        console.log(row);
+                        strHTML+='<tr>';
+                        strHTML+='      <td>'+row.id+'</td>';
+                        strHTML+='      <td>'+replaceNull(row.variance_id)+'</td>';
+                        strHTML+='      <td>'+formatDate(replaceNull(row.created_at))+'</td>';
+                        strHTML+='      <td>'+number_format(replaceNull(row.total_variance_quantity))+'</td>';
+                        strHTML+='      <td>'+actionTemplate(row.id)+'</td>';
+                        strHTML+='</tr>';
+                    });
+
+                    $("tbody").html(strHTML);
+
+                    $('#variance_report_list').DataTable();
+                },
+                initComplete: function(settings, json) {
+                    alert( 'DataTables has finished its initialisation.' );
+                  },
+                error: function(){
+                  $("#variance_report_list_processing").css("display","none");
+                }
+            }
+        });
+    });
+
+
+    </script>
+
+@endsection

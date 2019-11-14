@@ -102,17 +102,23 @@ Route::group(['middleware' => 'auth'], function () {
 	Route::get('/customer/lead/edit/{id}', 'CustomerLeadController@edit');
 	Route::get('/customer/lead/delete/{id}', 'CustomerLeadController@destroy');
 	Route::post('/customer/lead/modify/{id}', 'CustomerLeadController@update');
+	Route::post('/customer/lead/data/json', 'CustomerLeadController@datajson');
 
 	//Special Order Parts
 	Route::get('/parts/order/ticket/{ticket_id}', 'SpecialPartsOrderController@ticketPartsOrder');
 	Route::resource('/special/parts', 'SpecialPartsOrderController');
+	Route::post('/special/parts/data/json', 'SpecialPartsOrderController@datajson');
+	Route::get('/special/parts/delete/{id}', 'SpecialPartsOrderController@destroy');
 
 	//Buyback
 	Route::resource('/buyback', 'BuybackController');
 	Route::post('/buyback/ajax/{id}', 'BuybackController@buybackAjaxUpdate');
 	Route::get('/buyback/print/{id}', 'BuybackController@buybackPrint');
 	Route::post('/buyback/pos/ajax', 'BuybackController@storeFromPOS');
+	Route::post('/buyback/data/json', 'BuybackController@datajson');
+	Route::get('/buyback/delete/{id}', 'BuybackController@destroy');
 
+	Route::post('/report/buyback/data/json', 'BuybackController@dataReportjson');
 	Route::get('/report/buyback', 'BuybackController@report');
 	Route::post('/report/buyback', 'BuybackController@report');
 	Route::post('/report/excel/buyback', 'BuybackController@exportExcel');
@@ -120,26 +126,31 @@ Route::group(['middleware' => 'auth'], function () {
 
 	//Close Store 
 	Route::get('/store/close/report', 'CloseDrawerController@report');
+	Route::post('/store/close/data/report/json', 'CloseDrawerController@closeDrawerReportPRjson');
 	Route::post('/store/close/report', 'CloseDrawerController@report');
 	Route::post('/store/close/excel/report', 'CloseDrawerController@exportExcel');
 	Route::post('/store/close/pdf/report', 'CloseDrawerController@exportPDF');
 
 	Route::get('/report/payout', 'InvoiceController@Payoutreport');
+	Route::post('/report/payout/data/json', 'InvoiceController@payoutReportdatajson');
 	Route::post('/report/payout', 'InvoiceController@Payoutreport');
 	Route::post('/report/excel/payout', 'InvoiceController@exportPayoutExcel');
 	Route::post('/report/pdf/payout', 'InvoiceController@exportPayoutPDF');
 
 	Route::get('/lcd/status/report', 'InStoreRepairController@reportLCDStatus');
+	Route::post('/lcd/status/data/report/json', 'InStoreRepairController@InstoreLCDRepairDRPjson');
 	Route::post('/lcd/status/report', 'InStoreRepairController@reportLCDStatus');
 	Route::post('/lcd/status/excel/report', 'InStoreRepairController@exportExcelLCDStatus');
 	Route::post('/lcd/status/pdf/report', 'InStoreRepairController@exportPDFLCDStatus');
 
 	Route::get('/salvage/report', 'InStoreRepairController@reportSalvage');
+	Route::post('/salvage/data/report/json', 'InStoreRepairController@InstoreSalvageRepairDRPjson');
 	Route::post('/salvage/report', 'InStoreRepairController@reportSalvage');
 	Route::post('/salvage/excel/report', 'InStoreRepairController@exportExcelSalvage');
 	Route::post('/salvage/pdf/report', 'InStoreRepairController@exportPDFSalvage');
 
 	Route::get('/report/highestseller', 'HigherCashierSaleController@reporthighestCashierSales');
+	Route::post('/report/highestseller/data/json', 'HigherCashierSaleController@datajson');
 	Route::post('/report/highestseller', 'HigherCashierSaleController@reporthighestCashierSales');
 	Route::post('/report/highestseller/excel/report', 'HigherCashierSaleController@exportExcelhighestCashierSales');
 	Route::post('/report/highestseller/pdf/report', 'HigherCashierSaleController@exportPDFhighestCashierSales');
@@ -214,8 +225,10 @@ Route::group(['middleware' => 'auth'], function () {
 	//------------------Product route start--------------------//
 	Route::get('/product', 'ProductController@index')->name('customer');
 	Route::get('/product/list', 'ProductController@show');
+	Route::post('/product/fulldata/datatableProductjson', 'ProductController@datatableProductjson');
 	Route::post('/product/list', 'ProductController@show');
 	Route::get('/product/report', 'ProductController@report');
+	Route::post('/product/data/table/report/json', 'ProductController@productStatusReportjson');
 	Route::post('/product/save', 'ProductController@store');
 	Route::post('/product/ajax/save', 'ProductController@storeAjax');
 	Route::post('/product/ajax/ticket/save', 'ProductController@storeTicketAjax');
@@ -250,6 +263,7 @@ Route::group(['middleware' => 'auth'], function () {
 	Route::get('/tender/pdf/report', 'TenderController@invoicePDF');
 
 	Route::get('/report/tender', 'TenderController@Report');
+	Route::post('/report/data/tender/json', 'TenderController@tenderDataReportjson');
 	Route::post('/report/tender', 'TenderController@Report');
 	Route::post('/report/excel/tender', 'TenderController@ExcelReportTender');
 	Route::post('/report/pdf/tender', 'TenderController@PdfReportTender');
@@ -299,6 +313,7 @@ Route::group(['middleware' => 'auth'], function () {
 	// ------------------------tender route start------------------//
 	Route::get('/expense/voucher', 'ExpenseController@index')->name('expense');
 	Route::get('/expense/voucher/report', 'ExpenseController@show');
+	Route::post('/expense/voucher/report/json', 'ExpenseController@datajsonExpenseReport');
 	Route::post('/expense/voucher/report', 'ExpenseController@show');
 	Route::post('/expense/voucher/save', 'ExpenseController@store');
 	Route::get('/expense/voucher/edit/{id}', 'ExpenseController@edit');
@@ -324,7 +339,9 @@ Route::group(['middleware' => 'auth'], function () {
 	//------------------Product Stockin route start--------------------//
 	Route::get('/product/stock/in', 'ProductStockinController@index');
 	Route::get('/product/stock/in/list', 'ProductStockinController@show');
+	Route::post('/product/stock/in/data/json', 'ProductStockinController@datatableProductStockInjson');
 	Route::get('/product/stock/in/report', 'ProductStockinController@report');
+	Route::post('/product/stock/in/data/report/json', 'ProductStockinController@productStockinReportPRjson');
 	Route::post('/product/stock/in/confirm', 'ProductStockinController@create');
 	Route::post('/product/stock/in/save', 'ProductStockinController@store');
 	Route::get('/product/stock/in/edit/{id}', 'ProductStockinController@edit');
@@ -346,6 +363,7 @@ Route::group(['middleware' => 'auth'], function () {
 	Route::get('/variance', 'ProductVarianceController@index');
 	Route::get('/variance/create', 'ProductVarianceController@index');
 	Route::get('/variance/report', 'ProductVarianceController@show');
+	Route::post('/variance/data/report/json', 'ProductVarianceController@datatableVendorjson');
 	Route::get('/variance/products/report/{id}', 'ProductVarianceController@varianceReport');
 	Route::post('/variance/save', 'ProductVarianceController@store');
 	Route::get('/variance/edit/{id}', 'ProductVarianceController@edit');
@@ -376,6 +394,7 @@ Route::group(['middleware' => 'auth'], function () {
 	Route::get('/partial/payment/paypal/{invoice_id}/{payment_id}/{paid_amount}/{status}', 'InvoiceController@getPOSPartialPaymentStatusPaypal');
 	Route::get('/counter-pos/payment/paypal/{invoice_id}/{status}', 'InvoiceController@getCounterPOSPaymentStatusPaypal');
 	Route::get('/sales/report', 'InvoiceController@show');
+	Route::post('/sales/data/report/json', 'InvoiceController@invoiceSalesReportjson');
 	Route::get('/sales/invoice/{invoice_id}', 'InvoiceController@invoiceShow');
 	Route::get('/sales/invoice/print/pdf/{invoice_id}', 'InvoiceController@invoicePDF');
 	Route::get('/sales/invoice/print/media/pdf/{ptype}/{invoice_id}', 'InvoiceController@invoicePDFByMedia');
@@ -408,7 +427,9 @@ Route::group(['middleware' => 'auth'], function () {
 
 	//------------------Sales Return Route Start--------------//
 	Route::get('/sales/return/create', 'InvoiceController@makeSalesReturn');
+	Route::post('/sales/return/create/json', 'InvoiceController@datajsonSalesReturn');
 	Route::get('/sales/return/list', 'InvoiceController@makeSalesReturnShow');
+	Route::post('/sales/return/list/json', 'InvoiceController@datajsonsalesReturnList');
 	Route::post('/sales/return/list', 'InvoiceController@makeSalesReturnShow');
 	Route::post('/sales/return/list/excel/report', 'InvoiceController@exportExcelmakeSalesReturnShow');
 	Route::post('/sales/return/list/pdf/report', 'InvoiceController@exportPDFmakeSalesReturnShow');
@@ -432,6 +453,7 @@ Route::group(['middleware' => 'auth'], function () {
 	Route::post('/vendor/save', 'VendorController@store');
 	Route::post('/vendor/modify/{id}', 'VendorController@update');
 	Route::get('/vendor/list', 'VendorController@show');
+	Route::post('/vendor/data/json', 'VendorController@datatableVendorjson');
 	Route::get('/vendor/edit/{id}', 'VendorController@edit');
 	Route::get('/vendor/delete/{id}', 'VendorController@destroy');
 	//------------------Vendor  Route Start--------------//
@@ -482,24 +504,28 @@ Route::group(['middleware' => 'auth'], function () {
 	//------------------Report route start--------------------//
 	Route::get('/profit', 'InvoiceProfitController@index');
 	Route::get('/profit/report', 'InvoiceProfitController@index');
+	Route::post('/profit/data/report/json', 'InvoiceProfitController@datajson');
 	Route::post('/profit/excel/report', 'InvoiceProfitController@export');
 	Route::post('/profit/pdf/report', 'InvoiceProfitController@invoicePDF');
 	Route::post('/profit/report', 'InvoiceProfitController@index');
 
 	Route::get('/product/profit', 'ProductController@indexProfit');
 	Route::get('/product/profit/report', 'ProductController@indexProfit');
+	Route::post('/product/profit/data/report/json', 'ProductController@dataProductProfitjson');
 	Route::post('/product/profit/excel/report', 'ProductController@exportProfit');
 	Route::post('/product/profit/pdf/report', 'ProductController@invoicePDFProfit');
 	Route::post('/product/profit/report', 'ProductController@indexProfit');
 
 	Route::get('/payment', 'InvoicePaymentController@index');
 	Route::get('/payment/report', 'InvoicePaymentController@index');
+	Route::post('/payment//data/report/json', 'InvoicePaymentController@datajson');
 	Route::post('/payment/report', 'InvoicePaymentController@index');
 	Route::post('/payment/excel/report', 'InvoicePaymentController@exportExcel');
 	Route::post('/payment/pdf/report', 'InvoicePaymentController@invoicePDF');
 
 
 	Route::get('/paypal/payment/report', 'InvoicePaymentController@Paypalindex');
+	Route::post('/paypal/payment/data/json', 'InvoicePaymentController@paypalPaymentReportjson');
 	Route::post('/paypal/payment/report', 'InvoicePaymentController@Paypalindex');
 	Route::post('/paypal/payment/excel/report', 'InvoicePaymentController@PaypalexportExcel');
 	Route::post('/paypal/payment/pdf/report', 'InvoicePaymentController@PaypalinvoicePDF');
@@ -512,7 +538,9 @@ Route::group(['middleware' => 'auth'], function () {
 	Route::post('/repair/save', 'InStoreRepairController@storeR');
 	Route::post('/repair/info/pos/ajax', 'InStoreRepairController@posInfostore');
 	Route::get('/repair/list', 'InStoreRepairController@index');
+	Route::post('/repair/data/json', 'InStoreRepairController@datatableInstoreRepairjson');
 	Route::get('/repair/report', 'InStoreRepairController@report');
+	Route::post('/repair/report/data/json', 'InStoreRepairController@InstoreRepairReportPrjson');
 	Route::post('/repair/report', 'InStoreRepairController@report');
 	Route::post('/repair/excel/report', 'InStoreRepairController@exportExcel');
 	Route::post('/repair/pdf/report', 'InStoreRepairController@exportPDF');
@@ -553,7 +581,9 @@ Route::group(['middleware' => 'auth'], function () {
 	Route::post('/ticket/save', 'InStoreTicketController@store');
 	Route::post('/ticket/info/pos/ajax', 'InStoreTicketController@posInfostore');
 	Route::get('/ticket/list', 'InStoreTicketController@index');
+	Route::post('/ticket/data/json', 'InStoreTicketController@datatableInstoreTicketjson');
 	Route::get('/ticket/report', 'InStoreTicketController@report');
+	Route::post('/ticket/data/report/json', 'InStoreTicketController@inStoreTicketPRjson');
 	Route::post('/ticket/report', 'InStoreTicketController@report');
 	Route::post('/ticket/excel/report', 'InStoreTicketController@exportExcel');
 	Route::post('/ticket/pdf/report', 'InStoreTicketController@exportPDF');
@@ -564,6 +594,7 @@ Route::group(['middleware' => 'auth'], function () {
 
 	//------------------warranty route start--------------------//
 	Route::get('/warranty', 'WarrantyController@index');
+	Route::post('/warranty/data/json', 'WarrantyController@datajson');
 	Route::get('/warranty/invoice/{id}', 'WarrantyController@create');
 	Route::post('/warranty/save', 'WarrantyController@store');
 	Route::post('/warranty/update/{id}', 'WarrantyController@update');
@@ -572,6 +603,7 @@ Route::group(['middleware' => 'auth'], function () {
 	Route::get('/warranty/cart/print', 'WarrantyController@getCart');
 	Route::get('/warranty/cart/clear', 'WarrantyController@getClearCart');
 	Route::get('/warranty/report', 'WarrantyController@show');
+	Route::post('/warranty/report/json', 'WarrantyController@dataReportjson');
 	Route::get('/warranty/delete/{id}', 'WarrantyController@destroy');
 	Route::get('/warranty/view/{id}', 'WarrantyController@edit');
 	Route::get('/warranty/batch-out', 'WarrantyController@batchOut');
@@ -653,6 +685,7 @@ Route::group(['middleware' => 'auth'], function () {
 	//----------------Card Info Start-----------------------------//
 	Route::get('/attendance/punch/manual','CashierPunchController@create');
 	Route::get('/attendance/punch/report','CashierPunchController@report');
+	Route::post('/attendance/punch/data/json','CashierPunchController@datatableCashierPunchjson');
 	Route::post('/attendance/punch/report','CashierPunchController@report');
 	Route::post('/attendance/punch/excel','CashierPunchController@ExcelReport');
 	Route::post('/attendance/punch/pdf','CashierPunchController@PdfReport');
@@ -678,6 +711,7 @@ Route::group(['middleware' => 'auth'], function () {
 	Route::post('/authorize/net/capture/pos/payment','InvoiceController@AuthorizenetCardPayment');
 	Route::post('/authorize/net/capture/pos/partial/payment','InvoiceController@AuthorizenetCardPartialPayment');
 	Route::get('/authorize/net/payment/history','AuthorizeNetPaymentHistoryController@index');
+	Route::post('/authorize/net/payment/data/json','AuthorizeNetPaymentHistoryController@datajson');
 	Route::post('/authorize/net/payment/refund','InvoiceController@refund');
 	Route::post('/authorize/net/payment/void','InvoiceController@voidTransaction');
 
@@ -692,6 +726,7 @@ Route::group(['middleware' => 'auth'], function () {
 
 
 	Route::get('/stripe/payment/history', 'StripePaymentController@show');
+	Route::post('/stripe/payment/data/json', 'StripePaymentController@datajson');
 	Route::post('/stripe/payment/history/report','StripePaymentController@show');
 	Route::post('/stripe/payment/history/excel/report', 'StripePaymentController@ExcelReport');
 	Route::post('/stripe/payment/history/pdf/report', 'StripePaymentController@PdfReport');

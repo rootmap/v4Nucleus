@@ -20,6 +20,63 @@ class HigherCashierSaleController extends Controller
     private $sdc;
     public function __construct(){ $this->sdc = new StaticDataController(); }
     
+
+    private function methodToGetMembersCount($search=''){
+
+        $tab=HigherCashierSale::select('id','created_at','cashier_name','invoice_total')
+                     ->where('store_id',$this->sdc->storeID())
+                     ->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('id','LIKE','%'.$search.'%');
+                        $query->orWhere('created_at','LIKE','%'.$search.'%');
+                        $query->orWhere('cashier_name','LIKE','%'.$search.'%');
+                        $query->orWhere('invoice_total','LIKE','%'.$search.'%');
+                        return $query;
+                     })
+                     ->count();
+        return $tab;
+    }
+
+    private function methodToGetMembers($start, $length,$search=''){
+
+        $tab=HigherCashierSale::select('id','created_at','cashier_name','invoice_total')
+                     ->where('store_id',$this->sdc->storeID())
+                     ->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('id','LIKE','%'.$search.'%');
+                        $query->orWhere('created_at','LIKE','%'.$search.'%');
+                        $query->orWhere('cashier_name','LIKE','%'.$search.'%');
+                        $query->orWhere('invoice_total','LIKE','%'.$search.'%');
+                        return $query;
+                     })
+                     ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function datajson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->methodToGetMembersCount($search); // get your total no of data;
+        $members = $this->methodToGetMembers($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
+    }
+
     public function reporthighestCashierSales(Request $request)
     {
         $cashier_id='';
@@ -58,7 +115,7 @@ class HigherCashierSaleController extends Controller
 
         if(empty($cashier_id) && empty($dateString))
         {
-            $invoice=HigherCashierSale::where('store_id',$this->sdc->storeID())
+            /*$invoice=HigherCashierSale::where('store_id',$this->sdc->storeID())
                      ->when($cashier_id, function ($query) use ($cashier_id) {
                             return $query->where('cashier_id','=', $cashier_id);
                      })
@@ -67,7 +124,8 @@ class HigherCashierSaleController extends Controller
                      })
                      ->orderBy('id','DESC')
                      ->take(100)
-                     ->get();
+                     ->get();*/
+            $invoice=array();
         }
         else
         {
@@ -79,6 +137,7 @@ class HigherCashierSaleController extends Controller
                             return $query->whereRaw($dateString);
                      })
                      ->get();
+
         }
 
         

@@ -113,8 +113,13 @@ class ExpenseController extends Controller
             $end_date=$request->end_date;
         }
 
-
-        $invoice=$this->filterDataExpense($request);
+        if(empty($expense_id) && empty($start_date) && empty($end_date)){
+            $invoice=array();
+        }
+        else{
+            $invoice=$this->filterDataExpense($request);
+        }
+        
 
         $ExpenseHead=ExpenseHead::where('store_id',$this->sdc->storeID())->get();
    
@@ -175,7 +180,6 @@ class ExpenseController extends Controller
                          ->when($dateString, function ($query) use ($dateString) {
                                 return $query->whereRaw($dateString);
                          })
-                         ->take(100)
                          ->orderBy('id','DESC')
                          ->get();
         }
@@ -194,6 +198,67 @@ class ExpenseController extends Controller
         
 
         return $invoice;
+    }
+
+    private function ExpenseReportJsonCount($search=''){
+
+        $tab=Expense::select('id','expense_name','expense_date','expense_description','expense_amount','created_at')
+                     ->where('store_id',$this->sdc->storeID())->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('id','LIKE','%'.$search.'%');
+                        $query->orWhere('expense_name','LIKE','%'.$search.'%');
+                        $query->orWhere('expense_date','LIKE','%'.$search.'%');
+                        $query->orWhere('expense_description','LIKE','%'.$search.'%');
+                        $query->orWhere('expense_amount','LIKE','%'.$search.'%');
+                        $query->orWhere('created_at','LIKE','%'.$search.'%');
+
+                        return $query;
+                     })
+
+                     ->count();
+        return $tab;
+    }
+
+    private function ExpenseReportJson($start, $length,$search=''){
+
+        $tab=Expense::select('id','expense_name','expense_date','expense_description','expense_amount','created_at')
+                     ->where('store_id',$this->sdc->storeID())->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('id','LIKE','%'.$search.'%');
+                        $query->orWhere('expense_name','LIKE','%'.$search.'%');
+                        $query->orWhere('expense_date','LIKE','%'.$search.'%');
+                        $query->orWhere('expense_description','LIKE','%'.$search.'%');
+                        $query->orWhere('expense_amount','LIKE','%'.$search.'%');
+                        $query->orWhere('created_at','LIKE','%'.$search.'%');
+
+                        return $query;
+                     })
+                     ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function datajsonExpenseReport(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->ExpenseReportJsonCount($search); // get your total no of data;
+        $members = $this->ExpenseReportJson($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
     }
 
     public function Excelexport(Request $request) 

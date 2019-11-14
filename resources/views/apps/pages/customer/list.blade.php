@@ -44,37 +44,6 @@
 						<tbody>
 							
 						</tbody>
-						{{-- <tbody>
-							@if(isset($dataTable))
-							@foreach($dataTable as $row)
-							<tr>
-								<td>{{$row->id}}</td>
-								<td>{{$row->name}}</td>
-								<td>{{$row->address}}</td>
-								<td>{{$row->phone}}</td>
-								<td>{{$row->email}}</td>
-								<td>{{$row->last_invoice_no}}</td>
-								@if(in_array('list_customer_report', $dataMenuAssigned))
-								<td width="450">
-									<a href="{{url('customer/report/'.$row->id)}}" class="btn btn-green mr-1 change-action" @if($userguideInit==1) data-step="2" data-intro="When you see report then click view report button." @endif>
-										<i class="icon-file-o"></i> View Report
-									</a>
-									<a href="{{url('customer/edit/'.$row->id)}}" class="btn btn-green mr-1 btn-darken-2" @if($userguideInit==1) data-step="3" data-intro="When you see modify then click edit button." @endif>
-										<i class="icon-edit"></i> edit
-									</a>
-									<a href="{{url('customer/delete/'.$row->id)}}" class="btn btn-green mr-1 btn-darken-3" @if($userguideInit==1) data-step="4" data-intro="When you delete report then click delete button." @endif>
-										<i class="icon-trash"></i> Delete
-									</a>
-								</td>
-								@endif
-							</tr>
-							@endforeach
-							@else
-							<tr>
-								<td colspan="6">No Record Found</td>
-							</tr>
-							@endif
-						</tbody> --}}
 					</table>
 				</div>
 			</div>
@@ -158,13 +127,9 @@
 
 		function replaceNull(valH){
 			var returnHt='';
-
 			if(valH !== null && valH !== '') {
 					returnHt=valH;
-				
-				
 			}
-
 			return returnHt;
 		}
 
@@ -175,7 +140,6 @@
 	            url :"{{url('customer/data/json')}}",
 	            headers: {
 			        'X-CSRF-TOKEN':'{{csrf_token()}}',
-
 			    },
 	            type: "POST",
 	            complete:function(data){

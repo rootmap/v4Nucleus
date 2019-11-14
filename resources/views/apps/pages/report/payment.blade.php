@@ -132,12 +132,12 @@
 			</div>
 			<div class="card-body collapse in">
 				<div class="table-responsive">
-					<table class="table table-striped table-bordered zero-configuration">
+					<table class="table table-striped table-bordered" id="report_table">
 						<thead>
 							<tr>
 								<th>Pay.Id</th>
 								<th>Pay.Date</th>
-								<th>Customer</th>
+								<th width="200">Customer</th>
 								<th>Tender</th>
 								<th>Paid Amount</th>
 								<th>Invoice ID</th>
@@ -156,7 +156,7 @@
 	                                <td>{{formatDate($inv->created_at)}}</td>
 	                                <td>{{$inv->customer_name}}</td>
 	                                <td>{{$inv->tender_name}}</td>
-	                                <td>{{$inv->paid_amount}}</td>
+	                                <td>{{number_format($inv->paid_amount,2)}}</td>
 	                                <td>{{$inv->invoice_id}}</td>
 	                            </tr>
 	                            <?php 
@@ -176,7 +176,7 @@
 
 						<div class="col-lg-4 col-sm-4 border-right-green bg-green border-right-lighten-4">
                             <div class="card-block text-xs-center">
-                                <h1 class="display-4 white"><i class="icon-money font-large-2"></i> ${{$paid_amount}}</h1>
+                                <h1 class="display-4 white"><i class="icon-money font-large-2"></i> $<span id="totalDataAmount">{{number_format($paid_amount,2)}}</span></h1>
                                 <span class="white">Total Paid Amount</span>
                             </div>
                         </div>
@@ -196,4 +196,81 @@
 @endsection
 
 
-@include('apps.include.datatable',['JDataTable'=>1,'selectTwo'=>1,'dateDrop'=>1])
+
+@include('apps.include.datatablecssjs',['selectTwo'=>1,'dateDrop'=>1])
+@section('RoleWiseMenujs')
+   <script>
+	
+	$(document).ready(function(e){
+
+		var dataObj="";
+		function replaceNull(valH){
+			var returnHt='';
+
+			if(valH !== null && valH !== '') {
+					returnHt=valH;
+			}
+
+			return returnHt;
+		}
+
+		@if(!empty($start_date) || !empty($end_date) || !empty($invoice_id) || !empty($customer_id) || !empty($tender_id))
+			@if(isset($invoice))
+        		@if(count($invoice)>0)
+        			$('#report_table').DataTable();
+        		@endif
+        	@endif
+        @else
+
+		$('#report_table').dataTable({
+			"bProcessing": true,
+         	"serverSide": true,
+         	"ajax":{
+	            url :"{{url('payment//data/report/json')}}",
+	            headers: {
+			        'X-CSRF-TOKEN':'{{csrf_token()}}',
+			    },
+	            type: "POST",
+	            complete:function(data){
+	            	console.log(data.responseJSON);
+	            	var totalData=data.responseJSON;
+	            	console.log(totalData.data);
+	            	var strHTML='';
+	            	var totalPrice=0;
+	            	$.each(totalData.data,function(key,row){
+	            		console.log(row);
+
+	            		strHTML+='<tr>';
+						strHTML+='		<td>'+row.id+'</td>';
+						strHTML+='		<td>'+formatDate(replaceNull(row.created_at))+'</td>';
+						strHTML+='		<td>'+row.customer_name+'</td>';
+						strHTML+='		<td>'+replaceNull(row.tender_name)+'</td>';
+						strHTML+='		<td>'+number_format(replaceNull(row.paid_amount))+'</td>';
+						strHTML+='		<td>'+replaceNull(row.invoice_id)+'</td>';						
+						strHTML+='</tr>';
+
+						totalPrice+=replaceNull(row.paid_amount)-0;
+
+	            	});
+
+	            	$("#totalDataAmount").html(number_format(totalPrice));
+
+	            	$("tbody").html(strHTML);
+	            	$('#report_table').DataTable();
+	            },
+	            initComplete: function(settings, json) {
+				    alert( 'DataTables has finished its initialisation.' );
+				  },
+	            error: function(){
+	              $("#report_table_processing").css("display","none");
+	            }
+          	}
+        });
+
+        @endif
+	});
+
+
+    </script>
+
+@endsection

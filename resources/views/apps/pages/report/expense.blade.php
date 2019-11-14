@@ -109,13 +109,13 @@
 			</div>
 			<div class="card-body collapse in">
 				<div class="table-responsive">
-					<table class="table table-striped table-bordered zero-configuration">
+					<table class="table table-striped table-bordered" id="expense_report">
 						<thead>
 							<tr>
 								<th>Voucher ID</th>
 								<th>Expense Head</th>
 								<th>Expense DATE</th>
-								<th>Description</th>
+								<th width="2000">Description</th>
 								<th>Expense AMOUNT</th>
 								<th>Created at</th>
 							</tr>
@@ -179,4 +179,81 @@
 @endsection
 
 
-@include('apps.include.datatable',['JDataTable'=>1,'selectTwo'=>1,'dateDrop'=>1])
+
+@include('apps.include.datatablecssjs',['selectTwo'=>1,'dateDrop'=>1])
+@section('RoleWiseMenujs')
+   <script>
+    
+    $(document).ready(function(e){
+
+        var dataObj="";
+        function replaceNull(valH){
+            var returnHt='';
+
+            if(valH !== null && valH !== '') {
+                    returnHt=valH;
+            }
+
+            return returnHt;
+        }
+
+        @if(!empty($expense_id) || !empty($start_date) || !empty($end_date))
+            @if(isset($invoice))
+                @if(count($invoice)>0)
+                    $('#expense_report').DataTable();
+                @endif
+            @endif
+        @else
+
+        $('#expense_report').dataTable({
+            "bProcessing": true,
+            "serverSide": true,
+            "ajax":{
+                url :"{{url('expense/voucher/report/json')}}",
+                headers: {
+                    'X-CSRF-TOKEN':'{{csrf_token()}}',
+                },
+                type: "POST",
+                complete:function(data){
+                    console.log(data.responseJSON);
+                    var totalData=data.responseJSON;
+                    console.log(totalData.data);
+                    var strHTML='';
+                    var totalPrice=0;
+                    $.each(totalData.data,function(key,row){
+                        console.log(row);
+
+                        strHTML+='<tr>';
+                        strHTML+='      <td>'+row.id+'</td>';
+                        strHTML+='      <td>'+row.expense_name+'</td>';
+                        strHTML+='      <td>'+formatDate(replaceNull(row.expense_date))+'</td>';
+                        strHTML+='      <td>'+replaceNull(row.expense_description)+'</td>';
+                        strHTML+='      <td>'+replaceNull(row.expense_amount)+'</td>';
+                        strHTML+='      <td>'+formatDate(replaceNull(row.created_at))+'</td>';
+                        strHTML+='</tr>';
+
+                        totalPrice+=replaceNull(row.price)-0;
+
+                    });
+
+                    $("#totalDataAmount").html(totalPrice);
+
+                    $("tbody").html(strHTML);
+                    $('#expense_report').DataTable();
+                },
+                initComplete: function(settings, json) {
+                    alert( 'DataTables has finished its initialisation.' );
+                  },
+                error: function(){
+                  $("#expense_report_processing").css("display","none");
+                }
+            }
+        });
+
+        @endif
+    });
+
+
+    </script>
+
+@endsection

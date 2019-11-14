@@ -22,13 +22,13 @@
 			</div>
 			<div class="card-body collapse in">
 				<div class="table-responsive">
-					<table class="table table-striped table-bordered zero-configuration">
+					<table class="table table-striped table-bordered" id="ticket_list">
 						<thead>
 							<tr>
 								<th>Id</th>
 								<th>Date</th>
 								<th>Customer</th>
-								<th>Subject</th>
+								<th width="300">Subject</th>
 								<th>Problem</th>
 								<th>Cost</th>
 								<th>Price</th>
@@ -39,6 +39,7 @@
 						</thead>
 						<tbody>
 							<?php 
+							/*
 							$invoice_total=0;
 							$cost_total=0;
 							$paid_amount=0;
@@ -79,6 +80,7 @@
 								?>
 	                            @endforeach
 							@endif
+							<?php */ ?>
 
 						</tbody>
 					</table>
@@ -98,4 +100,105 @@
 @endsection
 
 
-@include('apps.include.datatable',['JDataTable'=>1,'selectTwo'=>1,'dateDrop'=>1])
+@include('apps.include.datatablecssjs',['selectTwo'=>1,'dateDrop'=>1])
+@section('RoleWiseMenujs')
+   <script>
+    
+    $(document).ready(function(e){
+        var ticketView="{{url('ticket/view')}}";
+        var ticketPrint="{{url('ticket/print')}}";
+        var ticketDelete="{{url('ticket/delete')}}";
+
+        function actionTemplate(id){
+             var actHTml='';
+                actHTml+='<span class="dropdown" ';
+                			@if($userguideInit==1) 
+                actHTml+='	data-step="2" data-intro="In this button You see view repair info, print and  delete option." ';
+                			@endif
+                actHTml+='	>';
+	            actHTml+='  <button id="btnSearchDrop4" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" class="btn btn-green dropdown-toggle dropdown-menu-right"><i class="icon-cog3"></i></button>';
+	            actHTml+='                <span aria-labelledby="btnSearchDrop4" class="dropdown-menu mt-1 dropdown-menu-right">';
+	            actHTml+='                    <a href="'+ticketView+'/'+id+'" title="View Invoice" class="dropdown-item"><i class="icon-file-text"></i> View Repair Info</a>';
+	            actHTml+='                    <a href="'+ticketPrint+'/'+id+'" title="Print" class="dropdown-item"><i class="icon-printer"></i> Print</a>';
+	            actHTml+='                    <a href="'+ticketDelete+'/'+id+'" title="Delete" class="dropdown-item"><i class="icon-cross"></i> Delete</a>';
+	            actHTml+='                </span>';
+	            actHTml+='            </span>';
+
+                return actHTml;
+        }
+
+        var ticketPOSLink="{{url('pos/ticket')}}";
+        var ticketPOSPartialLink="{{url('pos/ticket/partial')}}";
+
+        function actionStatusTemplate(id,retail_price,payment_status){
+
+        	var actHTml='';
+        	if(payment_status=="Pending"){
+        		actHTml='<a href="'+ticketPOSLink+'/'+id+'" class="btn btn-green">'+number_format(retail_price)+' To POS  </a>';
+        	}
+        	else if(payment_status=="Partial"){
+        		actHTml='<a href="'+ticketPOSPartialLink+'/'+id+'" class="btn btn-green btn-darken-4"> PAY PARTIAL</a>';
+        	}
+        	else{
+        		actHTml='Paid';
+        	}
+        		
+        		
+            return actHTml;
+        }
+
+        function replaceNull(valH){
+            var returnHt='';
+            if(valH !== null && valH !== '') {
+                returnHt=valH                
+            }
+
+            return returnHt;
+        }
+
+        $('#ticket_list').dataTable({
+            "bProcessing": true,
+            "serverSide": true,
+            "ajax":{
+                url :"{{url('ticket/data/json')}}",
+                headers: {
+                    'X-CSRF-TOKEN':'{{csrf_token()}}',
+                },
+                type: "POST",
+                complete:function(data){
+                    console.log(data.responseJSON);
+                    var totalData=data.responseJSON;
+                    console.log(totalData.data);
+                    var strHTML='';
+                    $.each(totalData.data,function(key,row){
+                        console.log(row);
+                        strHTML+='<tr>';
+                        strHTML+='      <td>'+row.id+'</td>';
+                        strHTML+='      <td>'+formatDate(row.created_at)+'</td>';
+                        strHTML+='      <td>'+replaceNull(row.customer_name)+'</td>';
+                        strHTML+='      <td>'+replaceNull(row.product_name)+'</td>';
+                        strHTML+='      <td>'+replaceNull(row.problem_name)+'</td>';
+                        strHTML+='      <td>'+number_format(replaceNull(row.our_cost))+'</td>';
+                        strHTML+='      <td>'+number_format(replaceNull(row.retail_price))+'</td>';
+                        strHTML+='      <td>'+actionStatusTemplate(row.id,row.price,row.payment_status)+'</td>';
+                        strHTML+='      <td>'+replaceNull(row.invoice_id)+'</td>';
+                        strHTML+='      <td>'+actionTemplate(row.id)+'</td>';
+                        strHTML+='</tr>';
+                    });
+                    $("tbody").html(strHTML);
+                    $('#ticket_list').DataTable();
+                },
+                initComplete: function(settings, json) {
+                    alert( 'DataTables has finished its initialisation.' );
+                },
+                error: function(){
+                  $("#ticket_list_processing").css("display","none");
+                }
+            }
+        });
+    });
+
+
+    </script>
+
+@endsection

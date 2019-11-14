@@ -548,7 +548,7 @@ class InvoiceController extends Controller
 
         if(empty($cashier_id) && empty($dateString))
         {
-            $invoice=Payout::select('id','cashier_id','cashier_name','amount','negative_amount','reason','created_at')
+            /*$invoice=Payout::select('id','cashier_id','cashier_name','amount','negative_amount','reason','created_at')
                      ->where('store_id',$this->sdc->storeID())
                      ->when($cashier_id, function ($query) use ($cashier_id) {
                             return $query->where('cashier_id','=', $cashier_id);
@@ -558,7 +558,9 @@ class InvoiceController extends Controller
                      })
                      ->orderBy('id','DESC')
                      ->take(100)
-                     ->get();
+                     ->get();*/
+
+            $invoice=array();
         }
         else
         {
@@ -588,6 +590,68 @@ class InvoiceController extends Controller
                 'start_date'=>$start_date,
                 'end_date'=>$end_date
             ]);
+    }
+
+    private function payoutReportPrCount($search=''){
+
+        $tab=Payout::select('id','cashier_id','cashier_name','amount','negative_amount','reason','created_at')
+                     ->where('store_id',$this->sdc->storeID())
+                     ->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('id','LIKE','%'.$search.'%');
+                        $query->orWhere('cashier_id','LIKE','%'.$search.'%');
+                        $query->orWhere('cashier_name','LIKE','%'.$search.'%');
+                        $query->orWhere('amount','LIKE','%'.$search.'%');
+                        $query->orWhere('negative_amount','LIKE','%'.$search.'%');
+                        $query->orWhere('reason','LIKE','%'.$search.'%');
+                        $query->orWhere('created_at','LIKE','%'.$search.'%');
+                        return $query;
+                     })
+                     ->count();
+        return $tab;
+    }
+
+    private function payoutReportPr($start, $length,$search=''){
+
+        $tab=Payout::select('id','cashier_id','cashier_name','amount','negative_amount','reason','created_at')
+                     ->where('store_id',$this->sdc->storeID())
+                     ->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('id','LIKE','%'.$search.'%');
+                        $query->orWhere('cashier_id','LIKE','%'.$search.'%');
+                        $query->orWhere('cashier_name','LIKE','%'.$search.'%');
+                        $query->orWhere('amount','LIKE','%'.$search.'%');
+                        $query->orWhere('negative_amount','LIKE','%'.$search.'%');
+                        $query->orWhere('reason','LIKE','%'.$search.'%');
+                        $query->orWhere('created_at','LIKE','%'.$search.'%');
+                        return $query;
+                     })
+                     ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function payoutReportdatajson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->payoutReportPrCount($search); // get your total no of data;
+        $members = $this->payoutReportPr($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
     }
 
     public function PayoutQuery($request)
@@ -5723,7 +5787,7 @@ class InvoiceController extends Controller
 
         if(empty($invoice_id) && empty($invoice_status) && empty($customer_id) && empty($dateString))
         {
-            $tab=$invoice::Leftjoin('customers','invoices.customer_id','=','customers.id')
+            /*$tab=$invoice::Leftjoin('customers','invoices.customer_id','=','customers.id')
                      ->select('invoices.*','customers.name as customer_name')
                      ->where('invoices.store_id',$this->sdc->storeID())
                      ->when($invoice_id, function ($query) use ($invoice_id) {
@@ -5740,12 +5804,16 @@ class InvoiceController extends Controller
                      })
                      ->orderBy("invoices.id","DESC")
                      ->take(100)
-                     ->get();
+                     ->get();*/
+
+            $tab=array();
         }
         else
         {
             $tab=$invoice::Leftjoin('customers','invoices.customer_id','=','customers.id')
-                     ->select('invoices.*','customers.name as customer_name')
+                     ->select('invoices.*','customers.name as customer_name',\DB::Raw("(SELECT GROUP_CONCAT((SELECT p.name FROM lsp_products AS p WHERE p.id=d.product_id) SEPARATOR ', ')
+FROM lsp_invoice_products AS d WHERE d.invoice_id=lsp_invoices.invoice_id
+GROUP BY d.invoice_id) as product"))
                      ->where('invoices.store_id',$this->sdc->storeID())
                      ->when($invoice_id, function ($query) use ($invoice_id) {
                             return $query->where('invoices.invoice_id','=', $invoice_id);
@@ -5777,6 +5845,86 @@ class InvoiceController extends Controller
                 'end_date'=>$end_date
             ]);
     }    
+
+    private function invoiceSalesReportCount($search=''){
+
+        $tab=Invoice::Leftjoin('customers','invoices.customer_id','=','customers.id')
+                     ->select('invoices.id')
+                     ->where('invoices.store_id',$this->sdc->storeID())
+                     ->orderBy('invoices.id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('invoices.id','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.invoice_id','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.created_at','LIKE','%'.$search.'%');
+                        $query->orWhere('customers.name as customer_name','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.tender_name','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.invoice_status','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.total_amount','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.paid_amount','LIKE','%'.$search.'%');
+
+                        return $query;
+                     })
+                     ->count();
+        return $tab;
+    }
+
+    private function invoiceSalesReport($start, $length,$search=''){
+
+        $tab=Invoice::Leftjoin('customers','invoices.customer_id','=','customers.id')
+                     ->select(
+                        'invoices.id',
+                        'invoices.invoice_id',
+                        'invoices.created_at',
+                        'customers.name as customer_name',
+                        'invoices.tender_name',
+                        'invoices.invoice_status',
+                        'invoices.total_amount',
+                        'invoices.paid_amount',
+                        \DB::Raw("(SELECT GROUP_CONCAT((SELECT p.name FROM lsp_products AS p WHERE p.id=d.product_id) SEPARATOR ', ')
+FROM lsp_invoice_products AS d WHERE d.invoice_id=lsp_invoices.invoice_id
+GROUP BY d.invoice_id) as product")
+                    )
+                     ->where('invoices.store_id',$this->sdc->storeID())
+                     ->orderBy('invoices.id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('invoices.id','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.invoice_id','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.created_at','LIKE','%'.$search.'%');
+                        $query->orWhere('customers.name as customer_name','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.tender_name','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.invoice_status','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.total_amount','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.paid_amount','LIKE','%'.$search.'%');
+
+                        return $query;
+                     })
+                     ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function invoiceSalesReportjson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->invoiceSalesReportCount($search); // get your total no of data;
+        $members = $this->invoiceSalesReport($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
+    }
 
      public function SalesReport(Request $request)
     {
@@ -5827,7 +5975,9 @@ class InvoiceController extends Controller
         }
 
         $tab=Invoice::Leftjoin('customers','invoices.customer_id','=','customers.id')
-                     ->select('invoices.*','customers.name as customer_name')
+                     ->select('invoices.*','customers.name as customer_name',\DB::Raw("(SELECT GROUP_CONCAT((SELECT p.name FROM lsp_products AS p WHERE p.id=d.product_id) SEPARATOR ', ')
+FROM lsp_invoice_products AS d WHERE d.invoice_id=lsp_invoices.invoice_id
+GROUP BY d.invoice_id) as product"))
                      ->where('invoices.store_id',$this->sdc->storeID())
                      ->when($invoice_id, function ($query) use ($invoice_id) {
                             return $query->where('invoices.invoice_id','=', $invoice_id);
@@ -5859,11 +6009,11 @@ class InvoiceController extends Controller
         // dd($request);
         //excel 
         $data=array();
-        $array_column=array('Invoice ID','Sold To','Tender','Status','Invoice Total Amount','Invoice Date');
+        $array_column=array('Invoice ID','Product','Sold To','Tender','Status','Invoice Total Amount','Invoice Date');
         array_push($data, $array_column);
         $inv=$this->SalesReport($request);
         foreach($inv as $voi):
-            $inv_arry=array($voi->invoice_id,$voi->customer_name,$voi->tender_name,$voi->invoice_status,$voi->total_amount,formatDate($voi->created_at));
+            $inv_arry=array($voi->invoice_id,$voi->product,$voi->customer_name,$voi->tender_name,$voi->invoice_status,$voi->total_amount,formatDate($voi->created_at));
             array_push($data, $inv_arry);
         endforeach;
 
@@ -5905,6 +6055,7 @@ class InvoiceController extends Controller
                 <thead>
                 <tr>
                 <th class="text-center" style="font-size:12px;" >Invoice ID</th>
+                <th class="text-center" style="font-size:12px;" >Product</th>
                 <th class="text-center" style="font-size:12px;" >Sold To</th>
                 <th class="text-center" style="font-size:12px;" >Tender</th>
                 <th class="text-center" style="font-size:12px;" >Status</th>
@@ -5921,6 +6072,7 @@ class InvoiceController extends Controller
     
                         $html .='<tr>
                         <td>'.$voi->invoice_id.'</td>
+                        <td>'.$voi->product.'</td>
                         <td>'.$voi->customer_name.'</td>
                         <td>'.$voi->tender_name.'</td>
                         <td>'.$voi->invoice_status.'</td>
@@ -5957,15 +6109,77 @@ class InvoiceController extends Controller
 
     public function makeSalesReturn(Invoice $invoice)
     {
-        $tab=$invoice::join('customers','invoices.customer_id','=','customers.id')
+        /*$tab=$invoice::join('customers','invoices.customer_id','=','customers.id')
                      ->select('invoices.*','customers.name as customer_name')
                      ->where('invoices.store_id',$this->sdc->storeID())
                      ->where('invoices.sales_return',0)
                      ->orderBy("invoices.id","DESC")
                      ->take(100)
-                     ->get();
-        return view('apps.pages.sales.make-sales-return',['dataTable'=>$tab]);
+                     ->get();,['dataTable'=>$tab]*/
+        return view('apps.pages.sales.make-sales-return');
     }
+
+    private function salesReturnJsonCount($search=''){
+
+        $tab=Invoice::join('customers','invoices.customer_id','=','customers.id')
+                     ->select('invoices.id','invoices.invoice_id','invoices.total_amount','invoices.created_at','customers.name as customer_name')
+                     ->where('invoices.store_id',$this->sdc->storeID())->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('invoices.id','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.invoice_id','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.total_amount','LIKE','%'.$search.'%');
+                        $query->orWhere('customers.name','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.created_at','LIKE','%'.$search.'%');
+
+                        return $query;
+                     })
+
+                     ->count();
+        return $tab;
+    }
+
+    private function salesReturnJson($start, $length,$search=''){
+
+        $tab=Invoice::join('customers','invoices.customer_id','=','customers.id')
+                     ->select('invoices.id','invoices.invoice_id','invoices.total_amount','invoices.created_at','customers.name as customer_name')
+                     ->where('invoices.store_id',$this->sdc->storeID())->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('invoices.id','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.invoice_id','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.total_amount','LIKE','%'.$search.'%');
+                        $query->orWhere('customers.name','LIKE','%'.$search.'%');
+                        $query->orWhere('invoices.created_at','LIKE','%'.$search.'%');
+
+                        return $query;
+                     })
+                     ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function datajsonSalesReturn(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->salesReturnJsonCount($search); // get your total no of data;
+        $members = $this->salesReturnJson($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
+    }
+
 
     public function makeSalesReturnShow(Request $request)
     {
@@ -6012,7 +6226,7 @@ class InvoiceController extends Controller
 
         if(empty($invoice_id) && empty($customer_id) && empty($start_date) && empty($end_date) && empty($dateString))
         {
-            $tab=SalesReturn::where('store_id',$this->sdc->storeID())
+            /*$tab=SalesReturn::where('store_id',$this->sdc->storeID())
                          ->when($invoice_id, function ($query) use ($invoice_id) {
                                 return $query->where('invoice_id','=', $invoice_id);
                          })
@@ -6024,7 +6238,9 @@ class InvoiceController extends Controller
                          })
                          ->orderBy("id","DESC")
                          ->take(100)
-                         ->get();
+                         ->get();*/
+
+            $tab=array();
         }
         else
         {
@@ -6054,6 +6270,69 @@ class InvoiceController extends Controller
             'start_date'=>$start_date,
             'end_date'=>$end_date
         ]);
+    }
+
+    private function salesReturnListJsonCount($search=''){
+
+        $tab=SalesReturn::select('id','invoice_id','created_at','customer_name','invoice_total','sales_return_amount','sales_return_note')
+                     ->where('store_id',$this->sdc->storeID())->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('id','LIKE','%'.$search.'%');
+                        $query->orWhere('invoice_id','LIKE','%'.$search.'%');
+                        $query->orWhere('created_at','LIKE','%'.$search.'%');
+                        $query->orWhere('customer_name','LIKE','%'.$search.'%');
+                        $query->orWhere('invoice_total','LIKE','%'.$search.'%');
+                        $query->orWhere('sales_return_amount','LIKE','%'.$search.'%');
+                        $query->orWhere('sales_return_note','LIKE','%'.$search.'%');
+
+                        return $query;
+                     })
+
+                     ->count();
+        return $tab;
+    }
+
+    private function salesReturnListJson($start, $length,$search=''){
+
+        $tab=SalesReturn::select('id','invoice_id','created_at','customer_name','invoice_total','sales_return_amount','sales_return_note')
+                     ->where('store_id',$this->sdc->storeID())->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('id','LIKE','%'.$search.'%');
+                        $query->orWhere('invoice_id','LIKE','%'.$search.'%');
+                        $query->orWhere('created_at','LIKE','%'.$search.'%');
+                        $query->orWhere('customer_name','LIKE','%'.$search.'%');
+                        $query->orWhere('invoice_total','LIKE','%'.$search.'%');
+                        $query->orWhere('sales_return_amount','LIKE','%'.$search.'%');
+                        $query->orWhere('sales_return_note','LIKE','%'.$search.'%');
+
+                        return $query;
+                     })
+                     ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function datajsonsalesReturnList(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->salesReturnListJsonCount($search); // get your total no of data;
+        $members = $this->salesReturnListJson($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
     }
 
     public function makeSalesReturnShowQuery($request)

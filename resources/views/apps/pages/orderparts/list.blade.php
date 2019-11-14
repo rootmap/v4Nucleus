@@ -26,7 +26,7 @@
 			</div>
 			<div class="card-body collapse in">
 				<div class="table-responsive">
-					<table class="table table-striped table-bordered zero-configuration">
+					<table class="table table-striped table-bordered" id="special_parts_order">
 						<thead>
 							<tr>
 								<th>ID</th>
@@ -40,7 +40,7 @@
 							</tr>
 						</thead>
 						<tbody>
-							@if(isset($dataTable))
+							{{-- @if(isset($dataTable))
 							@foreach($dataTable as $row)
 							<tr>
 								<td>{{$row->id}}</td>
@@ -60,7 +60,7 @@
                                         		<button type="submit" class="btn btn-sm btn-outline-green btn-accent-2"><i class="icon-cross"></i></button>	
                                         	</form>
                                         </a>
-                                        {{-- <a href="{{url('special/parts/delete/'.$row->id)}}" title="Delete" class="btn btn-sm btn-outline-info btn-accent-2"><i class="icon-cross"></i></a> --}}
+                                        <a href="{{url('special/parts/delete/'.$row->id)}}" title="Delete" class="btn btn-sm btn-outline-info btn-accent-2"><i class="icon-cross"></i></a>
 								</td>
 							</tr>
 							@endforeach
@@ -68,7 +68,7 @@
 							<tr>
 								<td colspan="8">No Record Found</td>
 							</tr>
-							@endif
+							@endif --}}
 						</tbody>
 					</table>
 				</div>
@@ -82,4 +82,80 @@
 </section>
 @endsection
 
-@include('apps.include.datatable',['JDataTable'=>1])
+
+@include('apps.include.datatablecssjs')
+@section('RoleWiseMenujs')
+   <script>
+	
+	$(document).ready(function(e){
+		var customerEditLink="{{url('special/parts')}}";
+		var customerDeleteLink="{{url('special/parts/delete')}}";
+
+		function actionTemplate(id){
+			var actHTml='';
+				actHTml+='<a href="'+customerEditLink+'/'+id+'/edit" class="btn btn-green mr-1 btn-darken-2" >	<i class="icon-edit"></i> </a>';
+
+				actHTml+='<a href="'+customerDeleteLink+'/'+id+'" class="btn btn-green mr-1 btn-darken-3" >	<i class="icon-trash"></i> </a>';
+
+				return actHTml;
+		}
+
+		function replaceNull(valH){
+			var returnHt='';
+
+			if(valH !== null && valH !== '') {
+					returnHt=valH;
+				
+				
+			}
+
+			return returnHt;
+		}
+
+		$('#special_parts_order').dataTable({
+			"bProcessing": true,
+         	"serverSide": true,
+         	"ajax":{
+	            url :"{{url('special/parts/data/json')}}",
+	            headers: {
+			        'X-CSRF-TOKEN':'{{csrf_token()}}',
+
+			    },
+	            type: "POST",
+	            complete:function(data){
+	            	console.log(data.responseJSON);
+	            	var totalData=data.responseJSON;
+	            	console.log(totalData.data);
+	            	var strHTML='';
+	            	$.each(totalData.data,function(key,row){
+	            		console.log(row);
+	            		strHTML+='<tr>';
+						strHTML+='		<td>'+row.id+'</td>';
+						strHTML+='		<td>'+row.ticket_id+'</td>';
+						strHTML+='		<td>'+replaceNull(row.ticket_payment_status)+'</td>';
+						strHTML+='		<td>'+replaceNull(row.customer_name)+'</td>';
+						strHTML+='		<td>'+replaceNull(row.description)+'</td>';
+						strHTML+='		<td>'+formatDate(replaceNull(row.ordered))+'</td>';
+						strHTML+='		<td>'+replaceNull(row.order_status)+'</td>';
+						strHTML+='		<td>'+actionTemplate(row.id)+'</td>';
+						strHTML+='</tr>';
+	            	});
+
+	            	$("tbody").html(strHTML);
+
+	            	$('#special_parts_order').DataTable();
+	            },
+	            initComplete: function(settings, json) {
+				    alert( 'DataTables has finished its initialisation.' );
+				  },
+	            error: function(){
+	              $("#special_parts_order_processing").css("display","none");
+	            }
+          	}
+        });
+	});
+
+
+    </script>
+
+@endsection

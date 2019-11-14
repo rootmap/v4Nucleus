@@ -111,26 +111,26 @@
 
 		<div class="col-lg-3 col-sm-12 border-right-pink bg-green bg-lighten-1 border-right-lighten-3">
             <div class="card-block text-xs-center">
-                <h1 class="display-6 white"><i class="icon-cart font-large-2"></i> ${{$invoice_total}}</h1>
+                <h1 class="display-6 white"><i class="icon-cart font-large-2"></i> $<span id="totalDataQuantity">{{$invoice_total}}</span></h1>
                 <span class="white">Total Sold Quantity</span>
             </div>
         </div>
         <div class="col-lg-3 col-sm-12 bg-green bg-lighten-2 border-right-pink border-right-lighten-3">
             <div class="card-block text-xs-center">
-                <h1 class="display-6 white"><i class="icon-trending_up font-large-2"></i> ${{$cost_total}}</h1>
+                <h1 class="display-6 white"><i class="icon-trending_up font-large-2"></i> $<span id="totalDataCost">{{$cost_total}}</span></h1>
                 <span class="white">Total Cost</span>
             </div>
         </div>
         
         <div class="col-lg-3 bg-green bg-lighten-3 col-sm-12">
             <div class="card-block text-xs-center">
-                <h1 class="display-6 white"><i class="icon-money font-large-2"></i> ${{$sold_total}}</h1>
+                <h1 class="display-6 white"><i class="icon-money font-large-2"></i> $<span id="totalDataAmount">{{$sold_total}}</span></h1>
                 <span class="white">Total Sales</span>
             </div>
         </div>
         <div class="col-lg-3 bg-green bg-lighten-4 col-sm-12">
             <div class="card-block text-xs-center">
-                <h1 class="display-6 white"><i class="icon-banknote font-large-2"></i> ${{$profit_total}}</h1>
+                <h1 class="display-6 white"><i class="icon-banknote font-large-2"></i> $<span id="totalDataProfit">{{$profit_total}}</span></h1>
                 <span class="white">Total Profit</span>
             </div>
         </div>
@@ -153,11 +153,11 @@
 			</div>
 			<div class="card-body collapse in">
 				<div class="table-responsive">
-					<table class="table table-striped table-bordered zero-configuration">
+					<table class="table table-striped table-bordered" id="report_table">
 						<thead>
 							<tr>
 								<th>ID</th>
-								<th>Name</th>
+								<th width="450">Name</th>
 								<th>Sold Quantity</th>
 								<th>Total Cost</th>
 								<th>Total Sold</th>
@@ -205,4 +205,102 @@
 @endsection
 
 
-@include('apps.include.datatable',['JDataTable'=>1,'selectTwo'=>1,'dateDrop'=>1])
+@include('apps.include.datatablecssjs',['selectTwo'=>1,'dateDrop'=>1])
+@section('RoleWiseMenujs')
+   <script>
+	
+	$(document).ready(function(e){
+
+		var dataObj="";
+		function replaceNull(valH){
+			var returnHt='';
+
+			if(valH !== null && valH !== '') {
+					returnHt=valH;
+			}
+
+			return returnHt;
+		}
+
+		@if(!empty($start_date) || !empty($end_date) || !empty($customer_id) || !empty($invoice_id))
+			@if(isset($invoice))
+        		@if(count($invoice)>0)
+        			$('#report_table').DataTable();
+        		@endif
+        	@endif
+        @else
+
+		$('#report_table').dataTable({
+			"bProcessing": true,
+         	"serverSide": true,
+         	"ajax":{
+	            url :"{{url('product/profit/data/report/json')}}",
+	            headers: {
+			        'X-CSRF-TOKEN':'{{csrf_token()}}',
+			    },
+	            type: "POST",
+	            complete:function(data){
+	            	console.log(data.responseJSON);
+	            	var totalData=data.responseJSON;
+	            	console.log(totalData.data);
+	            	var strHTML='';
+	            	var totalPrice=0;
+	            	var totalCost=0;
+	            	var totalProfit=0;
+	            	var totalSoldQuantity=0;
+	            	$.each(totalData.data,function(key,row){
+	            		console.log(row);
+
+	            		if(row.sold_times=="0"){
+	            			var totalInitCost=0;
+	            			var totalInitAmount=0;
+	            			var totalInitProfit=0;
+	            		}else{
+	            			var totalInitCost=row.cost?row.cost:0*row.sold_times?row.sold_times:0;
+		            		var totalInitAmount=row.price?row.price:0*row.sold_times?row.sold_times:0;
+		            		var totalInitProfit=totalInitAmount-totalInitCost;
+	            		}
+
+	            		
+
+	            		strHTML+='<tr>';
+						strHTML+='		<td>'+row.id+'</td>';
+						strHTML+='		<td>'+replaceNull(row.name)+'</td>';
+						strHTML+='		<td>'+number_format(replaceNull(row.sold_times))+'</td>';				
+						strHTML+='		<td>'+number_format(replaceNull(totalInitCost))+'</td>';						
+						strHTML+='		<td>'+number_format(replaceNull(totalInitAmount))+'</td>';						
+						strHTML+='		<td>'+number_format(replaceNull(totalInitProfit))+'</td>';						
+						strHTML+='		<td>'+formatDate(replaceNull(row.created_at))+'</td>';						
+						strHTML+='</tr>';
+
+						totalPrice+=replaceNull(totalInitAmount)-0;
+						totalCost+=replaceNull(totalInitCost)-0;
+						totalProfit+=replaceNull(totalInitProfit)-0;
+						totalSoldQuantity+=replaceNull(row.sold_times)-0;
+
+	            	});
+
+	            	$("#totalDataAmount").html(number_format(totalPrice));
+	            	$("#totalDataCost").html(number_format(totalCost));
+	            	$("#totalDataProfit").html(number_format(totalProfit));
+	            	$("#totalDataQuantity").html(number_format(totalSoldQuantity));
+
+	            	$("tbody").html(strHTML);
+	            	$('#report_table').DataTable();
+	            },
+	            initComplete: function(settings, json) {
+				    alert( 'DataTables has finished its initialisation.' );
+				  },
+	            error: function(){
+	              $("#report_table_processing").css("display","none");
+	            }
+          	}
+        });
+
+        @endif
+	});
+
+
+    </script>
+
+@endsection

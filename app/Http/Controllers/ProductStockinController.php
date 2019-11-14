@@ -240,6 +240,84 @@ class ProductStockinController extends Controller
      * @param  \App\ProductStockin  $productStockin
      * @return \Illuminate\Http\Response
      */
+
+      private function datatableProductStockInCount($search=''){
+
+        $tab=ProductStockinInvoice::join('vendors','product_stockin_invoices.vendor_id','=','vendors.id')
+                           ->select(
+                                            'product_stockin_invoices.id',
+                                            'product_stockin_invoices.order_no',
+                                            'product_stockin_invoices.order_date',
+                                            'product_stockin_invoices.total_quantity',
+                                            'vendors.name as vendor_name',
+                                            'product_stockin_invoices.created_at')
+                          ->where('product_stockin_invoices.store_id',$this->sdc->storeID())
+                          ->orderBy('product_stockin_invoices.id','DESC')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('product_stockin_invoices.id','LIKE','%'.$search.'%');
+                            $query->orWhere('product_stockin_invoices.order_no','LIKE','%'.$search.'%');
+                            $query->orWhere('product_stockin_invoices.order_date','LIKE','%'.$search.'%');
+                            $query->orWhere('product_stockin_invoices.total_quantity','LIKE','%'.$search.'%');
+                            $query->orWhere('vendors.name as vendor_name','LIKE','%'.$search.'%');
+                            $query->orWhere('product_stockin_invoices.created_at','LIKE','%'.$search.'%');
+
+                            return $query;
+                          })
+                          ->count();
+        return $tab;
+    }
+
+    private function datatableProductStockIn($start, $length,$search=''){
+
+        $tab=ProductStockinInvoice::join('vendors','product_stockin_invoices.vendor_id','=','vendors.id')
+                           ->select(
+                                            'product_stockin_invoices.id',
+                                            'product_stockin_invoices.order_no',
+                                            'product_stockin_invoices.order_date',
+                                            'product_stockin_invoices.total_quantity',
+                                            'vendors.name as vendor_name',
+                                            'product_stockin_invoices.created_at')
+                          ->where('product_stockin_invoices.store_id',$this->sdc->storeID())
+                          ->orderBy('product_stockin_invoices.id','DESC')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('product_stockin_invoices.id','LIKE','%'.$search.'%');
+                            $query->orWhere('product_stockin_invoices.order_no','LIKE','%'.$search.'%');
+                            $query->orWhere('product_stockin_invoices.order_date','LIKE','%'.$search.'%');
+                            $query->orWhere('product_stockin_invoices.total_quantity','LIKE','%'.$search.'%');
+                            $query->orWhere('vendors.name as vendor_name','LIKE','%'.$search.'%');
+                            $query->orWhere('product_stockin_invoices.created_at','LIKE','%'.$search.'%');
+
+                            return $query;
+                          })
+                          ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function datatableProductStockInjson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->datatableProductStockInCount($search); // get your total no of data;
+        $members = $this->datatableProductStockIn($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
+    }
+
+
     public function show(ProductStockin $productStockin)
     {
         
@@ -296,7 +374,7 @@ class ProductStockinController extends Controller
 
         if(empty($order_no) && empty($vendor_id) && empty($dateString))
         {
-            $invoice=ProductStockinInvoice::leftjoin('vendors','product_stockin_invoices.vendor_id','=','vendors.id')
+            /*$invoice=ProductStockinInvoice::leftjoin('vendors','product_stockin_invoices.vendor_id','=','vendors.id')
                      ->select('product_stockin_invoices.*','vendors.name as vendor_name')
                      ->where('product_stockin_invoices.store_id',$this->sdc->storeID())
                      ->when($order_no, function ($query) use ($order_no) {
@@ -310,7 +388,9 @@ class ProductStockinController extends Controller
                      })
                      ->orderBy('product_stockin_invoices.id','DESC')
                      ->take(100)
-                     ->get();
+                     ->get();*/
+
+            $invoice=array();
         }
         else
         {
@@ -344,6 +424,86 @@ class ProductStockinController extends Controller
                 'start_date'=>$start_date,
                 'end_date'=>$end_date
             ]);
+    }
+
+    private function productStockinReportPRCount($search=''){
+
+        $tab=ProductStockinInvoice::leftjoin('vendors','product_stockin_invoices.vendor_id','=','vendors.id')
+                                  ->select(
+                                    'product_stockin_invoices.id',
+                                    'product_stockin_invoices.order_no',
+                                    'product_stockin_invoices.order_date',
+                                    'product_stockin_invoices.total_quantity',
+                                    'product_stockin_invoices.created_at',
+                                    'product_stockin_invoices.created_by',
+                                    'vendors.name as vendor_name'
+                                    )
+                                  ->where('product_stockin_invoices.store_id',$this->sdc->storeID())
+                                  ->orderBy('product_stockin_invoices.id','DESC')
+                                  ->when($search, function ($query) use ($search) {
+                                    $query->where('product_stockin_invoices.id','LIKE','%'.$search.'%');
+                                    $query->orWhere('product_stockin_invoices.order_no','LIKE','%'.$search.'%');
+                                    $query->orWhere('product_stockin_invoices.order_date','LIKE','%'.$search.'%');
+                                    $query->orWhere('product_stockin_invoices.total_quantity','LIKE','%'.$search.'%');
+                                    $query->orWhere('product_stockin_invoices.created_at','LIKE','%'.$search.'%');
+                                    $query->orWhere('product_stockin_invoices.created_by','LIKE','%'.$search.'%');
+                                    $query->orWhere('vendors.name as vendor_name','LIKE','%'.$search.'%');
+                                    return $query;
+                                  })
+                                  ->count();
+        return $tab;
+    }
+
+    private function productStockinReportPR($start, $length,$search=''){
+
+        $tab=ProductStockinInvoice::leftjoin('vendors','product_stockin_invoices.vendor_id','=','vendors.id')
+                                  ->select(
+                                    'product_stockin_invoices.id',
+                                    'product_stockin_invoices.order_no',
+                                    'product_stockin_invoices.order_date',
+                                    'product_stockin_invoices.total_quantity',
+                                    'product_stockin_invoices.created_at',
+                                    'product_stockin_invoices.created_by',
+                                    'vendors.name as vendor_name'
+                                    )
+                                  ->where('product_stockin_invoices.store_id',$this->sdc->storeID())
+                                  ->orderBy('product_stockin_invoices.id','DESC')
+                                  ->when($search, function ($query) use ($search) {
+                                    $query->where('product_stockin_invoices.id','LIKE','%'.$search.'%');
+                                    $query->orWhere('product_stockin_invoices.order_no','LIKE','%'.$search.'%');
+                                    $query->orWhere('product_stockin_invoices.order_date','LIKE','%'.$search.'%');
+                                    $query->orWhere('product_stockin_invoices.total_quantity','LIKE','%'.$search.'%');
+                                    $query->orWhere('product_stockin_invoices.created_at','LIKE','%'.$search.'%');
+                                    $query->orWhere('product_stockin_invoices.created_by','LIKE','%'.$search.'%');
+                                    $query->orWhere('vendors.name as vendor_name','LIKE','%'.$search.'%');
+                                    return $query;
+                                  })
+                                  ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function productStockinReportPRjson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->productStockinReportPRCount($search); // get your total no of data;
+        $members = $this->productStockinReportPR($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
     }
 
      public function StockInReport(Request $request)

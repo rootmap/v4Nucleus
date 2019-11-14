@@ -75,12 +75,73 @@ class VendorController extends Controller
      * @param  \App\Vendor  $vendor
      * @return \Illuminate\Http\Response
      */
+    private function datatableVendorCount($search=''){
+
+        $tab=Vendor::select('id','name','email','phone','created_at')
+                          ->where('store_id',$this->sdc->storeID())
+                          ->orderBy('id','DESC')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('id','LIKE','%'.$search.'%');
+                            $query->orWhere('name','LIKE','%'.$search.'%');
+                            $query->orWhere('email','LIKE','%'.$search.'%');
+                            $query->orWhere('phone','LIKE','%'.$search.'%');
+                            $query->orWhere('created_at','LIKE','%'.$search.'%');
+
+                            return $query;
+                          })
+                          ->count();
+        return $tab;
+    }
+
+    private function datatableVendor($start, $length,$search=''){
+
+        $tab=Vendor::select('id','name','email','phone','created_at')
+                          ->where('store_id',$this->sdc->storeID())
+                          ->orderBy('id','DESC')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('id','LIKE','%'.$search.'%');
+                            $query->orWhere('name','LIKE','%'.$search.'%');
+                            $query->orWhere('email','LIKE','%'.$search.'%');
+                            $query->orWhere('phone','LIKE','%'.$search.'%');
+                            $query->orWhere('created_at','LIKE','%'.$search.'%');
+
+                            return $query;
+                          })
+                          ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function datatableVendorjson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->datatableVendorCount($search); // get your total no of data;
+        $members = $this->datatableVendor($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
+    }
+
+
     public function show(Vendor $vendor)
     {
 
 
-       $vendorInfo=Vendor::where('store_id',$this->sdc->storeID())->get();
-       return view('apps.pages.vendor.list',['dataTable'=>$vendorInfo]);
+       /*$vendorInfo=Vendor::where('store_id',$this->sdc->storeID())->get();,['dataTable'=>$vendorInfo]*/
+       return view('apps.pages.vendor.list');
    }
 
     /**

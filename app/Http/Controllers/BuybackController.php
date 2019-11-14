@@ -21,6 +21,8 @@ class BuybackController extends Controller
     private $sdc;
     public function __construct(){ $this->sdc = new StaticDataController(); }
 
+    
+
     public function index()
     {
         $tab=Buyback::where('store_id',$this->sdc->storeID())->orderBy('id','DESC')->take(100)->get();
@@ -207,6 +209,79 @@ class BuybackController extends Controller
      * @param  \App\CustomerLead  $customerLead
      * @return \Illuminate\Http\Response
      */
+
+    private function methodToGetMembersCount($search=''){
+
+        $tab=\DB::table('buybacks')
+                     ->select('id','customer_name','model','carrier','imei','condition','price','payment_method_name','keep_this_on','created_at')
+                     ->where('store_id',$this->sdc->storeID())->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('id','LIKE','%'.$search.'%');
+                        $query->orWhere('customer_name','LIKE','%'.$search.'%');
+                        $query->orWhere('model','LIKE','%'.$search.'%');
+                        $query->orWhere('carrier','LIKE','%'.$search.'%');
+                        $query->orWhere('imei','LIKE','%'.$search.'%');
+                        $query->orWhere('condition','LIKE','%'.$search.'%');
+                        $query->orWhere('price','LIKE','%'.$search.'%');
+                        $query->orWhere('payment_method_name','LIKE','%'.$search.'%');
+                        $query->orWhere('keep_this_on','LIKE','%'.$search.'%');
+                        $query->orWhere('created_at','LIKE','%'.$search.'%');
+
+                        return $query;
+                     })
+
+                     ->count();
+        return $tab;
+    }
+
+    private function methodToGetMembers($start, $length,$search=''){
+
+        $tab=\DB::table('buybacks')
+                     ->select('id','customer_name','model','carrier','imei','condition','price','payment_method_name','keep_this_on','created_at')
+                     ->where('store_id',$this->sdc->storeID())->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('id','LIKE','%'.$search.'%');
+                        $query->orWhere('customer_name','LIKE','%'.$search.'%');
+                        $query->orWhere('model','LIKE','%'.$search.'%');
+                        $query->orWhere('carrier','LIKE','%'.$search.'%');
+                        $query->orWhere('imei','LIKE','%'.$search.'%');
+                        $query->orWhere('condition','LIKE','%'.$search.'%');
+                        $query->orWhere('price','LIKE','%'.$search.'%');
+                        $query->orWhere('payment_method_name','LIKE','%'.$search.'%');
+                        $query->orWhere('keep_this_on','LIKE','%'.$search.'%');
+                        $query->orWhere('created_at','LIKE','%'.$search.'%');
+
+                        return $query;
+                     })
+                     ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function datajson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->methodToGetMembersCount($search); // get your total no of data;
+        $members = $this->methodToGetMembers($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
+    }
+
+
     public function show($id=0)
     {
         if($id>0)
@@ -232,8 +307,8 @@ class BuybackController extends Controller
         }
         else
         {
-            $tab=\DB::table('buybacks')->where('store_id',$this->sdc->storeID())->orderBy('id','DESC')->take(100)->get();
-            return view('apps.pages.buyback.list',['dataTable'=>$tab]);
+            //$tab=\DB::table('buybacks')->where('store_id',$this->sdc->storeID())->orderBy('id','DESC')->take(100)->get();,['dataTable'=>$tab]
+            return view('apps.pages.buyback.list');
         }
     }
 
@@ -767,6 +842,79 @@ class BuybackController extends Controller
         $this->sdc->log("Buyback","Buyback Order deleted."); 
         return redirect('buyback/list')->with('status', $this->moduleName.' Deleted Successfully !');
     }
+
+    private function methodToGetReportMembersCount($search=''){
+
+        $tab=\DB::table('buybacks')
+                     ->select('id','customer_name','model','carrier','imei','condition','price','payment_method_name','keep_this_on','invoice_id','created_at')
+                     ->where('store_id',$this->sdc->storeID())->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('id','LIKE','%'.$search.'%');
+                        $query->orWhere('customer_name','LIKE','%'.$search.'%');
+                        $query->orWhere('model','LIKE','%'.$search.'%');
+                        $query->orWhere('carrier','LIKE','%'.$search.'%');
+                        $query->orWhere('imei','LIKE','%'.$search.'%');
+                        $query->orWhere('condition','LIKE','%'.$search.'%');
+                        $query->orWhere('price','LIKE','%'.$search.'%');
+                        $query->orWhere('payment_method_name','LIKE','%'.$search.'%');
+                        $query->orWhere('keep_this_on','LIKE','%'.$search.'%');
+                        $query->orWhere('invoice_id','LIKE','%'.$search.'%');
+                        $query->orWhere('created_at','LIKE','%'.$search.'%');
+
+                        return $query;
+                     })
+
+                     ->count();
+        return $tab;
+    }
+
+    private function methodToGetReportMembers($start, $length,$search=''){
+
+        $tab=\DB::table('buybacks')
+                     ->select('id','customer_name','model','carrier','imei','condition','price','payment_method_name','keep_this_on','invoice_id','created_at')
+                     ->where('store_id',$this->sdc->storeID())->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('id','LIKE','%'.$search.'%');
+                        $query->orWhere('customer_name','LIKE','%'.$search.'%');
+                        $query->orWhere('model','LIKE','%'.$search.'%');
+                        $query->orWhere('carrier','LIKE','%'.$search.'%');
+                        $query->orWhere('imei','LIKE','%'.$search.'%');
+                        $query->orWhere('condition','LIKE','%'.$search.'%');
+                        $query->orWhere('price','LIKE','%'.$search.'%');
+                        $query->orWhere('payment_method_name','LIKE','%'.$search.'%');
+                        $query->orWhere('keep_this_on','LIKE','%'.$search.'%');
+                        $query->orWhere('invoice_id','LIKE','%'.$search.'%');
+                        $query->orWhere('created_at','LIKE','%'.$search.'%');
+
+                        return $query;
+                     })
+                     ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function dataReportjson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->methodToGetReportMembersCount($search); // get your total no of data;
+        $members = $this->methodToGetReportMembers($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
+    }
     
     public function report(Request $request)
     {
@@ -820,7 +968,8 @@ class BuybackController extends Controller
 
         if(empty($invoice_id) && empty($keep_this_on) && empty($customer_id) && empty($start_date) && empty($end_date) && empty($dateString))
         {
-            $invoice=Buyback::select('id','customer_name','model','carrier','imei','price','condition','payment_method_name','keep_this_on','invoice_id','created_at')
+            $invoice=array();
+            /*$invoice=Buyback::select('id','customer_name','model','carrier','imei','price','condition','payment_method_name','keep_this_on','invoice_id','created_at')
                      ->where('store_id',$this->sdc->storeID())
                      ->when($invoice_id, function ($query) use ($invoice_id) {
                             return $query->where('invoice_id','=', $invoice_id);
@@ -836,7 +985,7 @@ class BuybackController extends Controller
                      })
                      ->take(100)
                      ->orderBy('id','DESC')
-                     ->get();
+                     ->get();*/
         }
         else
         {
@@ -876,6 +1025,8 @@ class BuybackController extends Controller
                 'end_date'=>$end_date
             ]);
     }
+
+
 
     public function profitQuery($request)
     {

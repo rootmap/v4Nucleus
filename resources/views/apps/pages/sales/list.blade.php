@@ -143,14 +143,15 @@
                 </div>
                 <div class="card-body collapse in">
                     <div class="table-responsive" style="min-height: 360px;">
-                        <table class="table table-striped table-bordered zero-configuration">
+                        <table class="table table-striped table-bordered" id="report_table">
                             <thead>
                                 <tr>
                                     <th>ID</th>
                                     <th>Invoice ID</th>
                                     <th>Invoice Date</th>
-                                    <th>Sold To</th>
-                                    <th>Tender</th>
+                                    <th width="250">Product</th>
+                                    <th width="250">Sold To</th>
+                                    <th width="200">Tender</th>
                                     <th>Status</th>
                                     <th>Total Amount</th>
                                     <th>Paid Amount</th>
@@ -164,6 +165,7 @@
                                     <td>{{$row->id}}</td>
                                     <td>{{$row->invoice_id}}</td>
                                     <td>{{formatDate($row->created_at)}}</td>
+                                    <td>{{$row->product}}</td>
                                     <td>{{$row->customer_name}}</td>
                                     <td>
                                         @if($row->invoice_status=="Due")
@@ -190,7 +192,6 @@
                                             <button id="btnSearchDrop4" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" class="btn btn-green dropdown-toggle dropdown-menu-right"><i class="icon-cog3"></i></button>
                                             <span aria-labelledby="btnSearchDrop4" class="dropdown-menu mt-1 dropdown-menu-right">
                                                 <a href="{{url('sales/invoice/'.$row->id)}}" title="View Invoice" class="dropdown-item"><i class="icon-file-text"></i> View Invoice</a>
-                                                {{-- <a href="{{url('sales/partial/payment/'.$row->id)}}" title="Add Partial Payment" class="dropdown-item"><i class="icon-money"></i> Add Partial Payment</a> --}}
                                                 <a href="javascript:putInvoiceModal('{{$row->invoice_id}}');" title="Send Invoice" class="dropdown-item"><i class="icon-email2"></i> Send Invoice</a>
                                                 <a href="{{url('sales/edit/'.$row->id)}}" title="Edit" class="dropdown-item"><i class="icon-pencil22"></i> Edit</a>
                                                 <a href="{{url('sales/delete/'.$row->id)}}" title="Delete" class="dropdown-item"><i class="icon-cross"></i> Delete</a>
@@ -215,4 +216,129 @@
     @include('apps.include.modal.sendSlipModal')
 </section>
 @endsection
-@include('apps.include.datatable',['JDataTable'=>1,'selectTwo'=>1,'dateDrop'=>1,'invoiceSlip'=>1])
+
+@include('apps.include.datatablecssjs',['selectTwo'=>1,'dateDrop'=>1,'invoiceSlip'=>1])
+@section('RoleWiseMenujs')
+   <script>
+    
+    $(document).ready(function(e){
+
+        var dataObj="";
+        function replaceNull(valH){
+            var returnHt='';
+            if(valH !== null && valH !== '') {
+                    returnHt=valH;
+            }
+            return returnHt;
+        }
+
+        var partialLink="{{url('sales/partial/add/payment')}}";
+
+        function invoiceStatus(invoice_status,invoice_id){
+            var strHTML='';
+
+            if(invoice_status=="Due"){
+                strHTML+='<span class="btn btn-green btn-darken-4">'+invoice_status+'</span>';
+            }
+            else if(invoice_status=="Partial"){
+                strHTML+='<a href="'+partialLink+'/'+invoice_id+'" class="btn btn-green  btn-lighten-1">'+invoice_status+'</a>';
+            }else if(invoice_status=="Paid"){
+                strHTML+='<span class="btn btn-green btn-darken-1">'+invoice_status+'</span>';
+            }else{
+                strHTML+='<span class="btn btn-green btn-darken-3">'+invoice_status+'</span>';
+            }
+
+            return strHTML;
+        }
+
+        var InvoiceLink="{{url('sales/invoice')}}";
+        var InvoiceEditLink="{{url('sales/edit')}}";
+        var InvoiceDeleteLink="{{url('sales/delete')}}";
+
+        function actionTemplate(id,invoice_id){
+
+            var invID="'"+invoice_id+"'";
+
+            var strHTML='';
+                strHTML+='<span class="dropdown">';
+                strHTML+='  <button id="btnSearchDrop4" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" class="btn btn-green dropdown-toggle dropdown-menu-right"><i class="icon-cog3"></i></button>';
+                strHTML+='  <span aria-labelledby="btnSearchDrop4" class="dropdown-menu mt-1 dropdown-menu-right">';
+                strHTML+='      <a href="'+InvoiceLink+'/'+id+'" title="View Invoice" class="dropdown-item"><i class="icon-file-text"></i> View Invoice</a>';
+                strHTML+='      <a href="javascript:putInvoiceModal('+invID+');" title="Send Invoice" class="dropdown-item"><i class="icon-email2"></i> Send Invoice</a>';
+                strHTML+='      <a href="'+InvoiceEditLink+'/'+id+'" title="Edit" class="dropdown-item"><i class="icon-pencil22"></i> Edit</a>';
+                strHTML+='      <a href="'+InvoiceDeleteLink+'/'+id+'" title="Delete" class="dropdown-item"><i class="icon-cross"></i> Delete</a>';
+                strHTML+='  </span>';
+                strHTML+='</span>';
+
+                return strHTML;
+        }
+
+        @if(!empty($start_date) || !empty($end_date) || !empty($invoice_id) || !empty($invoice_status) || !empty($customer_id))
+            @if(isset($dataTable))
+                @if(count($dataTable)>0)
+                    $('#report_table').DataTable();
+                @endif
+            @endif
+        @else
+
+        $('#report_table').dataTable({
+            "bProcessing": true,
+            "serverSide": true,
+            "ajax":{
+                url :"{{url('sales/data/report/json')}}",
+                headers: {
+                    'X-CSRF-TOKEN':'{{csrf_token()}}',
+                },
+                type: "POST",
+                complete:function(data){
+                    console.log(data.responseJSON);
+                    var totalData=data.responseJSON;
+                    console.log(totalData.data);
+                    var strHTML='';
+                    var totalPrice=0;
+                    $.each(totalData.data,function(key,row){
+                        console.log(row);
+                        var tender="";
+                        if(row.invoice_status=="Due"){
+                            tender="Not Mention";
+                        }else{
+                            tender=replaceNull(row.tender_name);
+                        }
+                                             
+                        strHTML+='<tr>';
+                        strHTML+='      <td>'+row.id+'</td>';
+                        strHTML+='      <td>'+replaceNull(row.invoice_id)+'</td>';
+                        strHTML+='      <td>'+formatDate(replaceNull(row.created_at))+'</td>'; 
+                        strHTML+='      <td>'+replaceNull(row.product)+'</td>';
+                        strHTML+='      <td>'+replaceNull(row.customer_name)+'</td>';
+                        strHTML+='      <td>'+replaceNull(tender)+'</td>';
+                        strHTML+='      <td>'+invoiceStatus(row.invoice_status,row.invoice_id)+'</td>';
+                        strHTML+='      <td>'+number_format(replaceNull(row.total_amount))+'</td>';
+                        strHTML+='      <td>'+number_format(replaceNull(row.paid_amount))+'</td>';
+                        strHTML+='      <td>'+actionTemplate(row.id,row.invoice_id)+'</td>';
+                                  
+                        strHTML+='</tr>';
+
+                        totalPrice+=number_format(replaceNull(row.amount))-0;
+
+                    });
+
+                    $("tbody").html(strHTML);
+                    $('#report_table').DataTable();
+                },
+                initComplete: function(settings, json) {
+                    alert( 'DataTables has finished its initialisation.' );
+                  },
+                error: function(){
+                  $("#report_table_processing").css("display","none");
+                }
+            }
+        });
+
+        @endif
+    });
+
+
+    </script>
+
+@endsection

@@ -130,7 +130,7 @@ class CloseDrawerController extends Controller
 
         if(empty($user_id) && empty($dateString))
         {
-            $tabledata=CloseDrawer::select('id','opeing_time','closing_time','opening_amount','closing_amount','cashier_name','created_at')
+            /*$tabledata=CloseDrawer::select('id','opeing_time','closing_time','opening_amount','closing_amount','cashier_name','created_at')
                      ->where('store_id',$this->sdc->storeID())
                      ->when($user_id, function ($query) use ($user_id) {
                             return $query->where('cashier_id','=', $user_id);
@@ -140,7 +140,9 @@ class CloseDrawerController extends Controller
                      })
                      ->orderBy('id','DESC')
                      ->take(100)
-                     ->get();
+                     ->get();*/
+
+            $tabledata=array();
         }
         else
         {
@@ -169,6 +171,68 @@ class CloseDrawerController extends Controller
                 'start_date'=>$start_date,
                 'end_date'=>$end_date
             ]);
+    }
+
+    private function closeDrawerReportPRCount($search=''){
+
+        $tab=CloseDrawer::select('id')
+                          ->where('store_id',$this->sdc->storeID())
+                          ->orderBy('id','DESC')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('id','LIKE','%'.$search.'%');
+                            $query->orWhere('opeing_time','LIKE','%'.$search.'%');
+                            $query->orWhere('closing_time','LIKE','%'.$search.'%');
+                            $query->orWhere('opening_amount','LIKE','%'.$search.'%');
+                            $query->orWhere('closing_amount','LIKE','%'.$search.'%');
+                            $query->orWhere('cashier_name','LIKE','%'.$search.'%');
+                            $query->orWhere('created_at','LIKE','%'.$search.'%');
+                            return $query;
+                          })
+                          ->count();
+        return $tab;
+    }
+
+    private function closeDrawerReportPR($start, $length,$search=''){
+
+        $tab=CloseDrawer::select('id','opeing_time','closing_time','opening_amount','closing_amount','cashier_name','created_at')
+                          ->where('store_id',$this->sdc->storeID())
+                          ->orderBy('id','DESC')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('id','LIKE','%'.$search.'%');
+                            $query->orWhere('opeing_time','LIKE','%'.$search.'%');
+                            $query->orWhere('closing_time','LIKE','%'.$search.'%');
+                            $query->orWhere('opening_amount','LIKE','%'.$search.'%');
+                            $query->orWhere('closing_amount','LIKE','%'.$search.'%');
+                            $query->orWhere('cashier_name','LIKE','%'.$search.'%');
+                            $query->orWhere('created_at','LIKE','%'.$search.'%');
+                            return $query;
+                          })
+                          ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function closeDrawerReportPRjson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->closeDrawerReportPRCount($search); // get your total no of data;
+        $members = $this->closeDrawerReportPR($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
     }
 
     public function profitQuery($request)

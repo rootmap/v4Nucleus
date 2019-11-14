@@ -26,7 +26,7 @@
 			</div>
 			<div class="card-body collapse in">
 				<div class="table-responsive" style="min-height: 400px;">
-					<table class="table table-striped table-bordered zero-configuration">
+					<table class="table table-striped table-bordered" id="buyback_list">
 						<thead>
 							<tr>
 								<th>ID</th>
@@ -43,7 +43,7 @@
 							</tr>
 						</thead>
 						<tbody>
-							@if(isset($dataTable))
+							{{-- @if(isset($dataTable))
 							@foreach($dataTable as $row)
 							<tr>
 								<td>{{$row->id}}</td>
@@ -64,15 +64,7 @@
                                             <a href="{{url('buyback/'.$row->id)}}" title="View Buyback" class="dropdown-item"><i class="icon-file-text"></i> View Buyback</a>
                                             <a href="{{url('buyback/print/'.$row->id)}}" title="Edit" class="dropdown-item"><i class="icon-printer"></i> Print</a>
                                             <a href="{{url('buyback/'.$row->id.'/edit')}}" title="Edit" class="dropdown-item"><i class="icon-pencil22"></i> Edit</a>
-
-                                            <a href="javascript:void(0);" onclick="$(this).children('form').submit();" title="Delete"  class="dropdown-item">
-                                            	<i class="icon-cross"></i> Delete
-                                            	<form style="height: 0px; width: 0px;" method="POST" action="{{url('buyback/'.$row->id)}}">
-	                                        		{{ method_field('DELETE') }}
-	                                        		{{ csrf_field() }}
-	                                        		<button type="submit" style="background: none; opacity: 0; border: 0px;"></button>	
-	                                        	</form>
-                                            </a>
+                                            <a href="{{url('buyback/delete/'.$row->id)}}" title="Edit" class="dropdown-item"><i class="icon-cross"></i> Delete</a>
                                         </span>
                                     </span>
 									
@@ -83,7 +75,7 @@
 							<tr>
 								<td colspan="8">No Record Found</td>
 							</tr>
-							@endif
+							@endif --}}
 						</tbody>
 					</table>
 				</div>
@@ -97,4 +89,91 @@
 </section>
 @endsection
 
-@include('apps.include.datatable',['JDataTable'=>1])
+{{-- @include('apps.include.datatable',['JDataTable'=>1]) --}}
+
+@include('apps.include.datatablecssjs')
+@section('RoleWiseMenujs')
+   <script>
+	
+	$(document).ready(function(e){
+		var buybackLink="{{url('buyback')}}";
+		var buybackPrintLink="{{url('buyback/print')}}";
+		var customerDeleteLink="{{url('buyback/delete')}}";
+
+		function actionTemplate(id){
+			var actHTml='';
+				actHTml+='<span class="dropdown">';
+                actHTml+='<button id="btnSearchDrop4" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" class="btn btn-green dropdown-toggle dropdown-menu-right"><i class="icon-cog3"></i></button>';
+                actHTml+='<span aria-labelledby="btnSearchDrop4" class="dropdown-menu mt-1 dropdown-menu-right">';
+                actHTml+='    <a href="'+buybackLink+'/'+id+'" title="View Buyback" class="dropdown-item"><i class="icon-file-text"></i> View Buyback</a>';
+                actHTml+='    <a href="'+buybackPrintLink+'/'+id+'" title="Edit" class="dropdown-item"><i class="icon-printer"></i> Print</a>';
+                actHTml+='    <a href="'+buybackLink+'/'+id+'/edit" title="Edit" class="dropdown-item"><i class="icon-pencil22"></i> Edit</a>';
+                actHTml+='    <a href="'+customerDeleteLink+'/'+id+'" title="Edit" class="dropdown-item"><i class="icon-cross"></i> Delete</a>';
+                actHTml+='</span>';
+            actHTml+='</span>';
+
+				return actHTml;
+		}
+
+		function replaceNull(valH){
+			var returnHt='';
+
+			if(valH !== null && valH !== '') {
+					returnHt=valH;
+				
+				
+			}
+
+			return returnHt;
+		}
+
+		$('#buyback_list').dataTable({
+			"bProcessing": true,
+         	"serverSide": true,
+         	"ajax":{
+	            url :"{{url('buyback/data/json')}}",
+	            headers: {
+			        'X-CSRF-TOKEN':'{{csrf_token()}}',
+
+			    },
+	            type: "POST",
+	            complete:function(data){
+	            	console.log(data.responseJSON);
+	            	var totalData=data.responseJSON;
+	            	console.log(totalData.data);
+	            	var strHTML='';
+	            	$.each(totalData.data,function(key,row){
+	            		console.log(row);
+	            		strHTML+='<tr>';
+						strHTML+='		<td>'+row.id+'</td>';
+						strHTML+='		<td>'+row.customer_name+'</td>';
+						strHTML+='		<td>'+replaceNull(row.model)+'</td>';
+						strHTML+='		<td>'+replaceNull(row.carrier)+'</td>';
+						strHTML+='		<td>'+replaceNull(row.imei)+'</td>';
+						strHTML+='		<td>'+replaceNull(row.condition)+'</td>';
+						strHTML+='		<td>'+replaceNull(row.price)+'</td>';
+						strHTML+='		<td>'+replaceNull(row.payment_method_name)+'</td>';
+						strHTML+='		<td>'+replaceNull(row.keep_this_on)+'</td>';
+						strHTML+='		<td>'+formatDate(replaceNull(row.created_at))+'</td>';
+						strHTML+='		<td>'+actionTemplate(row.id)+'</td>';
+						strHTML+='</tr>';
+	            	});
+
+	            	$("tbody").html(strHTML);
+
+	            	$('#buyback_list').DataTable();
+	            },
+	            initComplete: function(settings, json) {
+				    alert( 'DataTables has finished its initialisation.' );
+				  },
+	            error: function(){
+	              $("#buyback_list_processing").css("display","none");
+	            }
+          	}
+        });
+	});
+
+
+    </script>
+
+@endsection

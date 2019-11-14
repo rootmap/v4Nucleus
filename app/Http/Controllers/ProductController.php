@@ -507,6 +507,76 @@ class ProductController extends Controller
      * @param  \App\Product  $product
      * @return \Illuminate\Http\Response
      */
+    private function datatableProductCount($search=''){
+
+        $tab=Product::select('id','category_name','barcode','name','quantity','price','cost','created_at')
+                          ->where('store_id',$this->sdc->storeID())
+                          ->where('general_sale',0)
+                          ->orderBy('id','DESC')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('id','LIKE','%'.$search.'%');
+                            $query->orWhere('category_name','LIKE','%'.$search.'%');
+                            $query->orWhere('barcode','LIKE','%'.$search.'%');
+                            $query->orWhere('name','LIKE','%'.$search.'%');
+                            $query->orWhere('quantity','LIKE','%'.$search.'%');
+                            $query->orWhere('price','LIKE','%'.$search.'%');
+                            $query->orWhere('cost','LIKE','%'.$search.'%');
+                            $query->orWhere('created_at','LIKE','%'.$search.'%');
+
+                            return $query;
+                          })
+                          ->count();
+        return $tab;
+    }
+
+    private function datatableProduct($start, $length,$search=''){
+
+        $tab=Product::select('id','category_name','barcode','name','quantity','price','cost','created_at')
+                          ->where('store_id',$this->sdc->storeID())
+                          ->where('general_sale',0)
+                          ->orderBy('id','DESC')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('id','LIKE','%'.$search.'%');
+                            $query->orWhere('category_name','LIKE','%'.$search.'%');
+                            $query->orWhere('barcode','LIKE','%'.$search.'%');
+                            $query->orWhere('name','LIKE','%'.$search.'%');
+                            $query->orWhere('quantity','LIKE','%'.$search.'%');
+                            $query->orWhere('price','LIKE','%'.$search.'%');
+                            $query->orWhere('cost','LIKE','%'.$search.'%');
+                            $query->orWhere('created_at','LIKE','%'.$search.'%');
+
+                            return $query;
+                          })
+                          ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function datatableProductjson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->datatableProductCount($search); // get your total no of data;
+        $members = $this->datatableProduct($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
+    }
+
+
+
     public function show(Request $request,Product $product)
     {
 
@@ -548,7 +618,7 @@ class ProductController extends Controller
 
         if(empty($category_id) && empty($start_date) && empty($end_date) && empty($dateString))
         {
-            $tab=$product::where('store_id',$this->sdc->storeID())
+            /*$tab=$product::where('store_id',$this->sdc->storeID())
                      ->when($dateString, function ($query) use ($dateString) {
                             return $query->whereRaw($dateString);
                      })
@@ -558,7 +628,8 @@ class ProductController extends Controller
                      ->where('general_sale',0)
                      ->orderBy('id','DESC')
                      ->take(100)
-                     ->get();
+                     ->get();*/
+            $tab=array();
         }
         else
         {
@@ -571,6 +642,8 @@ class ProductController extends Controller
                      })
                      ->where('general_sale',0)
                      ->get();
+
+            //dd($tab);
         }
 
         
@@ -615,13 +688,15 @@ class ProductController extends Controller
 
         if(empty($start_date) && empty($end_date) && empty($dateString))
         {
-            $invoice = Product::where('products.store_id',$this->sdc->storeID())
+            /*$invoice = Product::where('products.store_id',$this->sdc->storeID())
                      ->when($dateString, function ($query) use ($dateString) {
                             return $query->whereRaw($dateString);
                      })
                      ->orderBy("products.id","DESC")
                      ->take(100)
-                     ->get();
+                     ->get();*/
+
+            $invoice=array();
         }
         else
         {
@@ -637,8 +712,72 @@ class ProductController extends Controller
          // dd($invoice);            
         return view('apps.pages.product.report',
             [
-                'dataTable'=>$invoice
+                'dataTable'=>$invoice,
+                'start_date'=>$start_date,
+                'end_date'=>$end_date
             ]);
+    }
+
+    private function productStatusReportCount($search=''){
+
+        $tab=Product::select('id','name','quantity','price','cost','created_at')
+                          ->where('store_id',$this->sdc->storeID())
+                          ->orderBy('id','DESC')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('id','LIKE','%'.$search.'%');
+                            $query->orWhere('name','LIKE','%'.$search.'%');
+                            $query->orWhere('quantity','LIKE','%'.$search.'%');
+                            $query->orWhere('price','LIKE','%'.$search.'%');
+                            $query->orWhere('cost','LIKE','%'.$search.'%');
+                            $query->orWhere('created_at','LIKE','%'.$search.'%');
+                            return $query;
+                          })
+                          ->count();
+        return $tab;
+    }
+
+    private function productStatusReport($start, $length,$search=''){
+
+        $tab=Product::select('id','name','quantity','price','cost','created_at')
+                          ->where('store_id',$this->sdc->storeID())
+                          ->orderBy('id','DESC')
+                          ->when($search, function ($query) use ($search) {
+                            $query->where('id','LIKE','%'.$search.'%');
+                            $query->orWhere('name','LIKE','%'.$search.'%');
+                            $query->orWhere('quantity','LIKE','%'.$search.'%');
+                            $query->orWhere('price','LIKE','%'.$search.'%');
+                            $query->orWhere('cost','LIKE','%'.$search.'%');
+                            $query->orWhere('created_at','LIKE','%'.$search.'%');
+                            return $query;
+                          })
+                          ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function productStatusReportjson(Request $request){
+
+        
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->productStatusReportCount($search); // get your total no of data;
+        $members = $this->productStatusReport($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
     }
 
     public function ExportReport(request $request){
@@ -1077,7 +1216,13 @@ class ProductController extends Controller
             $end_date=$request->end_date;
         }
 
-        $invoice=$this->productProfitSQL($request);
+        if(empty($product_id) && empty($start_date) && empty($end_date)){
+            $invoice=array();
+        }else{
+            $invoice=$this->productProfitSQL($request);
+        }
+
+        
 
         $tab_customer=Product::where('store_id',$this->sdc->storeID())->get();
    
@@ -1090,6 +1235,66 @@ class ProductController extends Controller
                 'start_date'=>$start_date,
                 'end_date'=>$end_date
             ]);
+    }
+
+    private function methodToProductProfitCount($search=''){
+
+        $tab=Product::select('id','name','sold_times','cost','price','created_at')
+                     ->where('store_id',$this->sdc->storeID())
+                     ->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('id','LIKE','%'.$search.'%');
+                        $query->orWhere('name','LIKE','%'.$search.'%');
+                        $query->orWhere('sold_times','LIKE','%'.$search.'%');
+                        $query->orWhere('cost','LIKE','%'.$search.'%');
+                        $query->orWhere('price','LIKE','%'.$search.'%');
+                        $query->orWhere('created_at','LIKE','%'.$search.'%');
+                        return $query;
+                     })
+                     ->count();
+        return $tab;
+    }
+
+    private function methodToProductProfit($start, $length,$search=''){
+
+        $tab=Product::select('id','name','sold_times','cost','price','created_at')
+                     ->where('store_id',$this->sdc->storeID())
+                     ->orderBy('id','DESC')
+                     ->when($search, function ($query) use ($search) {
+                        $query->where('id','LIKE','%'.$search.'%');
+                        $query->orWhere('name','LIKE','%'.$search.'%');
+                        $query->orWhere('sold_times','LIKE','%'.$search.'%');
+                        $query->orWhere('cost','LIKE','%'.$search.'%');
+                        $query->orWhere('price','LIKE','%'.$search.'%');
+                        $query->orWhere('created_at','LIKE','%'.$search.'%');
+                        return $query;
+                     })
+                     ->skip($start)->take($length)->get();
+        return $tab;
+    }
+
+
+    public function dataProductProfitjson(Request $request){
+
+        $draw = $request->get('draw');
+        $start = $request->get('start');
+        $length = $request->get('length');
+        $search = $request->get('search');
+
+        $search = (isset($search['value']))? $search['value'] : '';
+
+        $total_members = $this->methodToProductProfitCount($search); // get your total no of data;
+        $members = $this->methodToProductProfit($start, $length,$search); //supply start and length of the table data
+
+        $data = array(
+            'draw' => $draw,
+            'recordsTotal' => $total_members,
+            'recordsFiltered' => $total_members,
+            'data' => $members,
+        );
+
+        echo json_encode($data);
+
     }
 
     public function exportProfit(Request $request) 
