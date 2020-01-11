@@ -273,7 +273,7 @@
 						strHTML+='		<td>'+replaceNull(row.CardType)+'</td>';
 						strHTML+='		<td>'+replaceNull(row.transactionID)+'</td>';
 						strHTML+='		<td>'+replaceNull(row.paid_amount)+'</td>';
-						strHTML+='		<td>'+actionTemplate(row.id)+'</td>';
+						strHTML+='		<td>'+actionTemplate(row.id,row.hour_gone,row.refund_status)+'</td>';
 						strHTML+='</tr>';
 
 						//totalPrice+=replaceNull(row.price)-0;

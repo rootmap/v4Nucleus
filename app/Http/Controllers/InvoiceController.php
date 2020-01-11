@@ -68,16 +68,14 @@ class InvoiceController extends Controller
     private $_api_content;
     public function __construct(){ 
         
-        $paypal_conf=\Config::get('paypal');
-        $this->_api_content=new ApiContext(new OAuthTokenCredential(
-            $paypal_conf['client_id'],
-            $paypal_conf['secret']
-        ));
 
-        $this->_api_content->setConfig($paypal_conf['settings']);
 
         $this->sdc = new StaticDataController(); 
         $this->authorizenet = new AuthorizeNetPaymentController(); 
+
+
+
+        
     }
 
     public function salesPartialFromSalesReport(Request $request,$sales_id=0)
@@ -125,6 +123,71 @@ class InvoiceController extends Controller
 
         return redirect('pos');
     } 
+
+    public function paypalAccountSettings(){
+
+        
+
+        $paypalSettingsCount=\DB::table('paypal_account_settings')
+                                ->where('store_id',$this->sdc->storeID())
+                                ->count();
+
+        //echo $paypalSettingsCount; die();
+
+        if($paypalSettingsCount==1){
+            $edit=\DB::table('paypal_account_settings')
+                                ->where('store_id',$this->sdc->storeID())
+                                ->first();
+
+            return view('apps.pages.settings.paypal-settings',['edit'=>$edit]);
+        }
+
+        return view('apps.pages.settings.paypal-settings');
+
+
+    }
+
+    public function paypalAccountSaveSettings(Request $request){
+
+
+
+        $checkExists=\DB::table('paypal_account_settings')
+                            ->where('store_id',$this->sdc->storeID())
+                            ->count();
+
+        $active_module=$request->active_module?1:0;
+
+        if($checkExists==0)
+        {
+            \DB::table('paypal_account_settings')->insert([
+                'store_id'=>$this->sdc->storeID(),
+                'paypal_client_id'=>$request->paypal_client_id,
+                'paypal_secret'=>$request->paypal_secret,
+                'active_module'=>$active_module,
+                'created_by'=>$this->sdc->UserID()
+            ]);
+
+            return redirect(url('paypal/account/setting'))->with('status','Paypal account info saved successfully.');
+        }
+        else
+        {
+            \DB::table('paypal_account_settings')
+                ->where('store_id',$this->sdc->storeID())
+                ->update([
+                    'paypal_client_id'=>$request->paypal_client_id,
+                    'paypal_secret'=>$request->paypal_secret,
+                    'active_module'=>$active_module,
+                    'updated_by'=>$this->sdc->UserID()
+                ]);
+
+                return redirect(url('paypal/account/setting'))->with('status','Paypal account info updated successfully.');
+        }
+
+
+
+
+
+    }
 
 
     //paypal intregation start
@@ -176,6 +239,37 @@ class InvoiceController extends Controller
             ->setPayer($payer)
             ->setRedirectUrls($redirectUrls)
             ->setTransactions(array($transaction));
+
+
+        $countPaypal=\DB::table('paypal_account_settings')
+                                     ->where('active_module',1)
+                                     ->where('store_id',$this->sdc->storeID())
+                                     ->count();
+        if($countPaypal==1){
+            $storePaypal=\DB::table('paypal_account_settings')
+                                     ->where('active_module',1)
+                                     ->where('store_id',$this->sdc->storeID())
+                                     ->first();
+
+            $this->_api_content=new ApiContext(new OAuthTokenCredential(
+                $storePaypal->paypal_client_id,
+                $storePaypal->paypal_secret
+            ));
+
+            $paypalSettings=array(
+                'mode'=>'sandbox',
+                'http.ConnectionTimeOut'=>30,
+                'log.LogEnabled'=>true,
+                'log.FileName'=>storage_path().'/logs/paypal.log',
+                'log.LogLevel'=>'ERROR',
+            );
+
+            $this->_api_content->setConfig($paypalSettings);
+        }
+        else
+        {
+            $this->_api_content="";
+        }
 
 
         try {
@@ -391,6 +485,36 @@ class InvoiceController extends Controller
             return redirect('paypal');
         }
 
+        $countPaypal=\DB::table('paypal_account_settings')
+                                     ->where('active_module',1)
+                                     ->where('store_id',$this->sdc->storeID())
+                                     ->count();
+        if($countPaypal==1){
+            $storePaypal=\DB::table('paypal_account_settings')
+                                     ->where('active_module',1)
+                                     ->where('store_id',$this->sdc->storeID())
+                                     ->first();
+
+            $this->_api_content=new ApiContext(new OAuthTokenCredential(
+                $storePaypal->paypal_client_id,
+                $storePaypal->paypal_secret
+            ));
+
+            $paypalSettings=array(
+                'mode'=>'sandbox',
+                'http.ConnectionTimeOut'=>30,
+                'log.LogEnabled'=>true,
+                'log.FileName'=>storage_path().'/logs/paypal.log',
+                'log.LogLevel'=>'ERROR',
+            );
+
+            $this->_api_content->setConfig($paypalSettings);
+        }
+        else
+        {
+            $this->_api_content="";
+        }
+
         $payment=Payment::get($payment_id,$this->_api_content);
         $excution=new PaymentExecution();
         $excution->setPayerId($request->PayerID);
@@ -420,6 +544,36 @@ class InvoiceController extends Controller
         {
             \Session::put('error','Failed token mismatch, Please tryagain');
             return redirect('invoice/pay/'.$invoice_id);
+        }
+
+        $countPaypal=\DB::table('paypal_account_settings')
+                                     ->where('active_module',1)
+                                     ->where('store_id',$this->sdc->storeID())
+                                     ->count();
+        if($countPaypal==1){
+            $storePaypal=\DB::table('paypal_account_settings')
+                                     ->where('active_module',1)
+                                     ->where('store_id',$this->sdc->storeID())
+                                     ->first();
+
+            $this->_api_content=new ApiContext(new OAuthTokenCredential(
+                $storePaypal->paypal_client_id,
+                $storePaypal->paypal_secret
+            ));
+
+            $paypalSettings=array(
+                'mode'=>'sandbox',
+                'http.ConnectionTimeOut'=>30,
+                'log.LogEnabled'=>true,
+                'log.FileName'=>storage_path().'/logs/paypal.log',
+                'log.LogLevel'=>'ERROR',
+            );
+
+            $this->_api_content->setConfig($paypalSettings);
+        }
+        else
+        {
+            $this->_api_content="";
         }
 
         $payment=Payment::get($payment_id,$this->_api_content);
@@ -804,6 +958,36 @@ class InvoiceController extends Controller
             return redirect('pos');
         }
 
+        $countPaypal=\DB::table('paypal_account_settings')
+                                     ->where('active_module',1)
+                                     ->where('store_id',$this->sdc->storeID())
+                                     ->count();
+        if($countPaypal==1){
+            $storePaypal=\DB::table('paypal_account_settings')
+                                     ->where('active_module',1)
+                                     ->where('store_id',$this->sdc->storeID())
+                                     ->first();
+
+            $this->_api_content=new ApiContext(new OAuthTokenCredential(
+                $storePaypal->paypal_client_id,
+                $storePaypal->paypal_secret
+            ));
+
+            $paypalSettings=array(
+                'mode'=>'sandbox',
+                'http.ConnectionTimeOut'=>30,
+                'log.LogEnabled'=>true,
+                'log.FileName'=>storage_path().'/logs/paypal.log',
+                'log.LogLevel'=>'ERROR',
+            );
+
+            $this->_api_content->setConfig($paypalSettings);
+        }
+        else
+        {
+            $this->_api_content="";
+        }
+
         $payment=Payment::get($payment_id,$this->_api_content);
         $excution=new PaymentExecution();
         $excution->setPayerId($request->PayerID);
@@ -869,6 +1053,36 @@ class InvoiceController extends Controller
         {
             \Session::put('error','Failed token mismatch, Please tryagain');
             return redirect('pos');
+        }
+
+        $countPaypal=\DB::table('paypal_account_settings')
+                                     ->where('active_module',1)
+                                     ->where('store_id',$this->sdc->storeID())
+                                     ->count();
+        if($countPaypal==1){
+            $storePaypal=\DB::table('paypal_account_settings')
+                                     ->where('active_module',1)
+                                     ->where('store_id',$this->sdc->storeID())
+                                     ->first();
+
+            $this->_api_content=new ApiContext(new OAuthTokenCredential(
+                $storePaypal->paypal_client_id,
+                $storePaypal->paypal_secret
+            ));
+
+            $paypalSettings=array(
+                'mode'=>'sandbox',
+                'http.ConnectionTimeOut'=>30,
+                'log.LogEnabled'=>true,
+                'log.FileName'=>storage_path().'/logs/paypal.log',
+                'log.LogLevel'=>'ERROR',
+            );
+
+            $this->_api_content->setConfig($paypalSettings);
+        }
+        else
+        {
+            $this->_api_content="";
         }
 
         $payment=Payment::get($payment_id,$this->_api_content);
@@ -999,6 +1213,36 @@ class InvoiceController extends Controller
         {
             \Session::put('error','Failed token mismatch, Please tryagain');
             return redirect('counter-display');
+        }
+
+        $countPaypal=\DB::table('paypal_account_settings')
+                                     ->where('active_module',1)
+                                     ->where('store_id',$this->sdc->storeID())
+                                     ->count();
+        if($countPaypal==1){
+            $storePaypal=\DB::table('paypal_account_settings')
+                                     ->where('active_module',1)
+                                     ->where('store_id',$this->sdc->storeID())
+                                     ->first();
+
+            $this->_api_content=new ApiContext(new OAuthTokenCredential(
+                $storePaypal->paypal_client_id,
+                $storePaypal->paypal_secret
+            ));
+
+            $paypalSettings=array(
+                'mode'=>'sandbox',
+                'http.ConnectionTimeOut'=>30,
+                'log.LogEnabled'=>true,
+                'log.FileName'=>storage_path().'/logs/paypal.log',
+                'log.LogLevel'=>'ERROR',
+            );
+
+            $this->_api_content->setConfig($paypalSettings);
+        }
+        else
+        {
+            $this->_api_content="";
         }
 
         $payment=Payment::get($payment_id,$this->_api_content);
@@ -1189,6 +1433,36 @@ class InvoiceController extends Controller
                 ->setPayer($payer)
                 ->setRedirectUrls($redirectUrls)
                 ->setTransactions(array($transaction));
+
+            $countPaypal=\DB::table('paypal_account_settings')
+                                     ->where('active_module',1)
+                                     ->where('store_id',$this->sdc->storeID())
+                                     ->count();
+            if($countPaypal==1){
+                $storePaypal=\DB::table('paypal_account_settings')
+                                         ->where('active_module',1)
+                                         ->where('store_id',$this->sdc->storeID())
+                                         ->first();
+
+                $this->_api_content=new ApiContext(new OAuthTokenCredential(
+                    $storePaypal->paypal_client_id,
+                    $storePaypal->paypal_secret
+                ));
+
+                $paypalSettings=array(
+                    'mode'=>'sandbox',
+                    'http.ConnectionTimeOut'=>30,
+                    'log.LogEnabled'=>true,
+                    'log.FileName'=>storage_path().'/logs/paypal.log',
+                    'log.LogLevel'=>'ERROR',
+                );
+
+                $this->_api_content->setConfig($paypalSettings);
+            }
+            else
+            {
+                $this->_api_content="";
+            }
 
 
             try {
@@ -1470,6 +1744,36 @@ class InvoiceController extends Controller
                     ->setRedirectUrls($redirectUrls)
                     ->setTransactions(array($transaction));
 
+            $countPaypal=\DB::table('paypal_account_settings')
+                                     ->where('active_module',1)
+                                     ->where('store_id',$this->sdc->storeID())
+                                     ->count();
+            if($countPaypal==1){
+                $storePaypal=\DB::table('paypal_account_settings')
+                                         ->where('active_module',1)
+                                         ->where('store_id',$this->sdc->storeID())
+                                         ->first();
+
+                $this->_api_content=new ApiContext(new OAuthTokenCredential(
+                    $storePaypal->paypal_client_id,
+                    $storePaypal->paypal_secret
+                ));
+
+                $paypalSettings=array(
+                    'mode'=>'sandbox',
+                    'http.ConnectionTimeOut'=>30,
+                    'log.LogEnabled'=>true,
+                    'log.FileName'=>storage_path().'/logs/paypal.log',
+                    'log.LogLevel'=>'ERROR',
+                );
+
+                $this->_api_content->setConfig($paypalSettings);
+            }
+            else
+            {
+                $this->_api_content="";
+            }
+
 
             try {
                 $payment->create($this->_api_content);
@@ -1561,6 +1865,37 @@ class InvoiceController extends Controller
                     ->setPayer($payer)
                     ->setRedirectUrls($redirectUrls)
                     ->setTransactions(array($transaction));
+
+            $countPaypal=\DB::table('paypal_account_settings')
+                                     ->where('active_module',1)
+                                     ->where('store_id',$this->sdc->storeID())
+                                     ->count();
+            
+            if($countPaypal==1){
+                $storePaypal=\DB::table('paypal_account_settings')
+                                         ->where('active_module',1)
+                                         ->where('store_id',$this->sdc->storeID())
+                                         ->first();
+
+                $this->_api_content=new ApiContext(new OAuthTokenCredential(
+                    $storePaypal->paypal_client_id,
+                    $storePaypal->paypal_secret
+                ));
+
+                $paypalSettings=array(
+                    'mode'=>'sandbox',
+                    'http.ConnectionTimeOut'=>30,
+                    'log.LogEnabled'=>true,
+                    'log.FileName'=>storage_path().'/logs/paypal.log',
+                    'log.LogLevel'=>'ERROR',
+                );
+
+                $this->_api_content->setConfig($paypalSettings);
+            }
+            else
+            {
+                $this->_api_content="";
+            }
 
 
             try {
@@ -1885,6 +2220,36 @@ class InvoiceController extends Controller
                     ->setPayer($payer)
                     ->setRedirectUrls($redirectUrls)
                     ->setTransactions(array($transaction));
+
+            $countPaypal=\DB::table('paypal_account_settings')
+                                     ->where('active_module',1)
+                                     ->where('store_id',$this->sdc->storeID())
+                                     ->count();
+            if($countPaypal==1){
+                $storePaypal=\DB::table('paypal_account_settings')
+                                         ->where('active_module',1)
+                                         ->where('store_id',$this->sdc->storeID())
+                                         ->first();
+
+                $this->_api_content=new ApiContext(new OAuthTokenCredential(
+                    $storePaypal->paypal_client_id,
+                    $storePaypal->paypal_secret
+                ));
+
+                $paypalSettings=array(
+                    'mode'=>'sandbox',
+                    'http.ConnectionTimeOut'=>30,
+                    'log.LogEnabled'=>true,
+                    'log.FileName'=>storage_path().'/logs/paypal.log',
+                    'log.LogLevel'=>'ERROR',
+                );
+
+                $this->_api_content->setConfig($paypalSettings);
+            }
+            else
+            {
+                $this->_api_content="";
+            }
 
 
             try {
@@ -3075,7 +3440,7 @@ class InvoiceController extends Controller
 
     public function pos(Request $request)
     {
-        
+
         \DB::statement("call defaultTicketNRepairCreate('".$this->sdc->UserID()."','".$this->sdc->storeID()."')");
 
         $defualtCustomer=$this->genarateDefaultCustomer();
@@ -3133,8 +3498,12 @@ class InvoiceController extends Controller
         $CounterDisplay=$this->counterDisplayCheck();
 
         $tender=Tender::where('store_id',$this->sdc->storeID())->get();
-        $authorizeNettender=Tender::where('authorizenet',1)->get();
-        $payPaltender=Tender::where('paypal',1)->get();
+
+
+        
+        
+
+        
 
         $drawerStatus=OpenDrawer::where('store_id',$this->sdc->storeID())
                             ->where('store_status','Open')
@@ -3178,16 +3547,19 @@ class InvoiceController extends Controller
         {
            $stripe=\DB::table('stripe_store_settings')->where('store_id',$this->sdc->storeID())->first();
         }
-        
 
-        return view('apps.pages.pos.index',
-            [
+        $cardPointe='';
+        $cardPointe_store_settings=\DB::table('cardpointe_store_settings')->where('store_id',$this->sdc->storeID())->count();
+        if($cardPointe_store_settings>0)
+        {
+           $cardPointe=\DB::table('cardpointe_store_settings')->where('store_id',$this->sdc->storeID())->first();
+        }
+
+        $systemArray=[
                 'product'=>$pro,
                 'tender'=>$tender,
                 'catInfo'=>$catInfo,
-                'payPaltender'=>$payPaltender,
                 'drawerStatus'=>$drawerStatus,
-                'authorizeNettender'=>$authorizeNettender,
                 'ps'=>$ps,
                 'cart'=>$Cart,
                 'customerData'=>$tab_customer,
@@ -3203,8 +3575,41 @@ class InvoiceController extends Controller
                 'repairAsset'=>$repairAsset,
                 'ticketAsset'=>$ticketAsset,
                 'ticket_id'=>time(),
-                'stripe'=>$stripe
-            ]);
+                'stripe'=>$stripe,
+                'cardpointe'=>$cardPointe,
+            ];
+
+
+        $authorizeNettender="";
+        $authorizeNettender_count=\DB::table('authorize_net_payments')
+                                     ->where('active_module',1)
+                                     ->where('store_id',$this->sdc->storeID())
+                                     ->count();
+                                     
+        if($authorizeNettender_count==1){
+            $authorizeNettender=Tender::where('authorizenet',1)->get();
+
+            $systemArray = array_merge($systemArray,['authorizeNettender'=>$authorizeNettender]);
+
+        }
+
+
+        $payPaltender="";
+        $payPaltender_count=\DB::table('paypal_account_settings')
+                                     ->where('active_module',1)
+                                     ->where('store_id',$this->sdc->storeID())
+                                     ->count();
+                                     
+        if($payPaltender_count==1){
+            $payPaltender=Tender::where('paypal',1)->get();
+
+            $systemArray = array_merge($systemArray,['payPaltender'=>$payPaltender]);
+
+        }
+
+        
+
+        return view('apps.pages.pos.index',$systemArray);
     }
 
     public function GenaratePDF()

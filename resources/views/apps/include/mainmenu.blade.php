@@ -307,7 +307,11 @@
                     @endif 
 
                     @if(in_array('authorize/net/payment/history', $dataMenuAssigned))
-                    <li class="{{ Request::path() == '/authorize/net/payment/history' ? 'active' : '' }} border-bottom-purple"><a href="{{url('/authorize/net/payment/history')}}" class="menu-item">Authorize Payment Card History</a></li>
+                    <li class="{{ Request::path() == '/authorize/net/payment/history' ? 'active' : '' }} border-bottom-purple"><a href="{{url('/authorize/net/payment/history')}}" class="menu-item">Authorize Payment History</a></li>
+                    @endif 
+
+                    @if(in_array('cardpointe/payment/history', $dataMenuAssigned))
+                    <li class="{{ Request::path() == '/cardpointe/payment/history' ? 'active' : '' }} border-bottom-purple"><a href="{{url('/cardpointe/payment/history')}}" class="menu-item">CardPointe Payment History</a></li>
                     @endif 
 
                     @if(in_array('stripe/payment/history', $dataMenuAssigned))
@@ -398,6 +402,14 @@
 
                     @if(in_array('authorize/net/payment/setting', $dataMenuAssigned)) 
                     <li class="{{ Request::path() == 'authorize/net/payment/setting' ? 'active' : '' }} border-bottom-purple"><a href="{{url('/authorize/net/payment/setting')}}" class="menu-item">AuthorizeNet Account </a></li>
+                    @endif 
+
+                    @if(in_array('cardpointe/account/setting', $dataMenuAssigned)) 
+                    <li class="{{ Request::path() == 'cardpointe/account/setting' ? 'active' : '' }} border-bottom-purple"><a href="{{url('/cardpointe/account/setting')}}" class="menu-item">CardPointe Account </a></li>
+                    @endif 
+
+                    @if(in_array('paypal/account/setting', $dataMenuAssigned)) 
+                    <li class="{{ Request::path() == 'paypal/account/setting' ? 'active' : '' }} border-bottom-purple"><a href="{{url('/paypal/account/setting')}}" class="menu-item">Paypal Account Setting</a></li>
                     @endif 
                     
                     

@@ -74,6 +74,23 @@
 									</div>
 		                        </div>
 							</div>
+
+							<div class="form-body">
+	                			<div class="form-group row last">
+	                        		<label class="col-md-4 label-control">Active module</label>
+	                        		<div class="col-md-7">
+										<div class="form-group">
+											<input type="checkbox" id="eventRegInput1" class="border-green" placeholder="Transaction Key" 
+											@if(isset($edit))
+												@if($edit->active_module==1)
+													checked="checked"  
+												@endif
+											@endif 
+											 name="active_module">
+										</div>
+									</div>
+		                        </div>
+							</div>
 							
 							
 

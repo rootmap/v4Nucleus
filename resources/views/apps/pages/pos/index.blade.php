@@ -1,6 +1,7 @@
 @extends('apps.layout.master')
 @section('title','Point of Sales')
 @section('content')
+
 <section id="form-action-layouts">
     <?php 
         $userguideInit=StaticDataController::userguideInit();
@@ -449,6 +450,7 @@
            @include('apps.include.modal.taxModal',compact('ps'))
            @include('apps.include.modal.CustomerCardModal')
            @include('apps.include.modal.stripeCardModal',compact('stripe'))
+           @include('apps.include.modal.cardPointeCardModal')
            {{-- @include('apps.include.modal.CustomerPartialCardModal') --}}
            @include('apps.include.modal.paymodal',compact('stripe'))
            @include('apps.include.modal.open-drawer')
@@ -1471,12 +1473,12 @@
                                 $("#posCartSummary tr:eq(4)").find("td:eq(2)").children("span").html(parseNewPayment);
                             }
                             genarateSalesTotalCart();
-                            //------------------------Ajax POS Start-------------------------//
+                            
                             var AddPOSUrl="{{url('sales/cart/payment')}}";
                             $.post(AddPOSUrl,{'paymentID':8,'paidAmount':parseNewPayment,'_token':"{{csrf_token()}}"},function(response){
-                               // setTimeout(function(){ $("#CustomerCard").modal('show'); }, 3000);
+                               
                             });
-                            //------------------------Ajax POS End---------------------------//
+                            
                             $(".message-place-authorizenet").html(successMessage(data.message));
 
                         }
@@ -1485,10 +1487,10 @@
                             $(".message-place-authorizenet").html(warningMessage(data.message));
                         }
                     }
-                    //$(".message-place-authorizenet").html("dddd");
+                   
                 }
             });
-            //------------------------Ajax Customer End---------------------------//
+
 
 
         });
@@ -1498,6 +1500,422 @@
         $(".authorize_card_refund").click(function(){
             alert('Refund');
         });
+
+
+         $(".cardpointe_bolt_payment").click(function(){
+
+           
+
+            var customerID=$.trim($("select[name=customer_id]").val());
+            if(customerID.length==0)
+            {
+                //$("#payModal").modal('hide');
+                $(".payModal-message-area").html(warningMessage("Please select a customer."));
+                return false;
+            }
+            var subTotalPrice=0;
+            $.each($("#dataCart").find("tr"),function(index,row){
+                var rowPrice=$(row).find("td:eq(2)").children("span").html();
+                subTotalPrice+=(rowPrice-0);      
+            });
+
+            subTotalPrice=parseFloat(subTotalPrice).toFixed(2);
+
+            if(subTotalPrice<1)
+            {
+                //$("#payModal").modal('hide');
+               // alert("Your cart is empty");
+                $(".payModal-message-area").html(warningMessage("Your cart is empty"));
+                return false;
+            }
+
+            $(".payModal-message-area").html("<div class='col-md-12'>"+loadingOrProcessing("Please wait, checking bolt device.")+"<div>");
+
+            
+
+            var amount_to_pay=$("input[name=amount_to_pay]").val();
+            if($.trim(amount_to_pay)>0)
+            {
+                //$("#payModal").modal('hide');
+                //$("#cardPointeCustomerCard").modal('show');
+
+                //$(".cusStripeAm").html("$"+amount_to_pay);
+
+                var parseNewPayment=0;
+
+                var amount_to_pay=$("input[name=amount_to_pay]").val();                
+                var expaid=$("#posCartSummary tr:eq(4)").find("td:eq(1)").children("span").html();
+                if($.trim(expaid)==0)
+                {
+                    var parseNewPayment=parseFloat(amount_to_pay).toFixed(2);
+                }
+                else
+                {
+                    var newpayment=(expaid-0)+(amount_to_pay-0);
+                    var parseNewPayment=parseFloat(newpayment).toFixed(2);
+                }
+
+                //$(".card-pay-due-amount").html(parseNewPayment);
+               
+                var pingDevice="{{url('bolt/ping')}}";
+                $.ajax({
+                    'async': true,
+                    'type': "GET",
+                    'global': false,
+                    'dataType': 'json',
+                    'url': pingDevice,
+                    'success': function (data) {
+
+                        console.log(data);
+                        //return false;
+                        if(data.connected==false){
+                            $(".payModal-message-area").html("<div class='col-md-12'>"+warningMessage("Please connect your Bolt device with internet.")+"<div>");
+                        }
+                        else
+                        {
+                            ///Token Start
+                            $(".payModal-message-area").html("<div class='col-md-12'>"+loadingOrProcessing("Generating new session-id for transaction.")+"<div>");
+
+                            var boltTokenCaptureURL="{{url('bolt/token')}}";
+                            $.ajax({
+                                'async': true,
+                                'type': "POST",
+                                'global': false,
+                                'dataType': 'json',
+                                'url': boltTokenCaptureURL,
+                                'data': {
+                                    'amountToPay':parseNewPayment,
+                                    '_token':"{{csrf_token()}}"},
+                                'success': function (data) {
+                                    console.log(data);
+
+                                    if(data.connected==false){
+                                        $(".payModal-message-area").html("<div class='col-md-12'>"+warningMessage("Please connect your Bolt device with internet.")+"<div>");
+                                    }
+                                    else
+                                    {
+                                        var tokenSession=data.token;
+                                        ///Capture Card Start
+                                        $(".payModal-message-area").html("<div class='col-md-12'>"+loadingOrProcessing("Please Swipe/Insert your card to device & wait for PIN.")+"<div>");
+                                        var boltCaptureURL="{{url('bolt/capture')}}";
+                                        $.ajax({
+                                            'async': true,
+                                            'type': "POST",
+                                            'global': false,
+                                            'dataType': 'json',
+                                            'url': boltCaptureURL,
+                                            'data': {
+                                                'amountToPay':parseNewPayment,
+                                                'cardsession':tokenSession,
+                                                '_token':"{{csrf_token()}}"},
+                                            'success': function (data) {
+
+
+                                                console.log("cardPointe Bolt Print Sales ID : "+data);
+                                                if(data==null)
+                                                {
+                                                    $(".payModal-message-area").html(warningMessage("Failed to authorize payment. Please try again."));
+                                                }
+                                                else
+                                                {
+                                                    console.log(data.status);
+                                                    if(data.status==1)
+                                                    {
+                                                        var amount_to_pay=$("input[name=amount_to_pay]").val();
+                                                        
+                                                        var expaid=$("#posCartSummary tr:eq(4)").find("td:eq(2)").children("span").html();
+                                                        if($.trim(expaid)==0)
+                                                        {
+                                                            var parseNewPayment=parseFloat(amount_to_pay).toFixed(2);
+                                                            $("#posCartSummary tr:eq(4)").find("td:eq(2)").children("span").html(parseNewPayment);
+                                                        }
+                                                        else
+                                                        {
+                                                            var newpayment=(expaid-0)+(amount_to_pay-0);
+                                                            var parseNewPayment=parseFloat(newpayment).toFixed(2);
+                                                            $("#posCartSummary tr:eq(4)").find("td:eq(2)").children("span").html(parseNewPayment);
+                                                        }
+                                                        genarateSalesTotalCart();
+                                                        
+                                                        var AddPOSUrl="{{url('sales/cart/payment')}}";
+                                                        $.post(AddPOSUrl,{'paymentID':3,'paidAmount':parseNewPayment,'_token':"{{csrf_token()}}"},function(response){
+                                                          
+                                                        });
+                                                        
+                                                        $(".payModal-message-area").html(successMessage(data.message));
+                                                        
+                                                        setTimeout(function(){
+                                                                $("#payModal").modal('hide');
+                                                        }, 3000);
+
+                                                        $("#cartMessageProShow").show();
+                                                        $("#cartMessageProShow").html(successMessage("Payment completed, Please click on print/complete sale."));
+
+                                                    }
+                                                    else
+                                                    {
+                                                        $(".payModal-message-area").html(warningMessage(data.message));
+                                                    }
+                                                }
+                                               
+                                            }
+                                        });
+
+                                        ///Capture Card End
+
+                                    }
+
+                                }
+
+                            });
+
+                            // Token End
+                            
+                            
+                        }
+
+                        //console.log("cardPointe Bolt Print Sales ID : "+data);
+                    }
+                });
+
+
+
+                //------------------------Ajax Customer End---------------------------//
+                return false;
+
+            }
+            else
+            {
+                $(".payModal-message-area").html(warningMessage("You don't have any due."));
+            }
+        });
+
+
+        //cardPointe start
+        $(".cardpointe_card_payment").click(function(){
+
+           $(".cardpointeButton").show();
+
+            $(".cardPointe-cardnumber").val("");
+            $(".cardPointe-cardholder").val("");
+            $(".cardPointe-month option[value='']").prop("selected",true);
+            $(".cardPointe-year option[value='']").prop("selected",true);
+            $(".cardPointe-cvc").val("");
+
+            $(".cardPointe-cardholder").focus();
+
+            var customerID=$.trim($("select[name=customer_id]").val());
+            if(customerID.length==0)
+            {
+                //$("#payModal").modal('hide');
+                $(".payModal-message-area").html(warningMessage("Please select a customer."));
+                return false;
+            }
+            var subTotalPrice=0;
+            $.each($("#dataCart").find("tr"),function(index,row){
+                var rowPrice=$(row).find("td:eq(2)").children("span").html();
+                subTotalPrice+=(rowPrice-0);      
+            });
+
+            subTotalPrice=parseFloat(subTotalPrice).toFixed(2);
+
+            if(subTotalPrice<1)
+            {
+                //$("#payModal").modal('hide');
+               // alert("Your cart is empty");
+                $(".payModal-message-area").html(warningMessage("Your cart is empty"));
+                return false;
+            }
+
+            
+
+            var amount_to_pay=$("input[name=amount_to_pay]").val();
+            if($.trim(amount_to_pay)>0)
+            {
+                $("#payModal").modal('hide');
+                $("#cardPointeCustomerCard").modal('show');
+
+                $(".cusStripeAm").html("$"+amount_to_pay);
+
+                var parseNewPayment=0;
+
+                var amount_to_pay=$("input[name=amount_to_pay]").val();                
+                var expaid=$("#posCartSummary tr:eq(4)").find("td:eq(1)").children("span").html();
+                if($.trim(expaid)==0)
+                {
+                    var parseNewPayment=parseFloat(amount_to_pay).toFixed(2);
+                }
+                else
+                {
+                    var newpayment=(expaid-0)+(amount_to_pay-0);
+                    var parseNewPayment=parseFloat(newpayment).toFixed(2);
+                }
+
+                $(".card-pay-due-amount").html(parseNewPayment);
+
+
+            }
+            else
+            {
+                $(".payModal-message-area").html(warningMessage("You don't have any due."));
+            }
+        });
+
+        $("button.payCardPointe").click(function(){
+
+            //console.log("WOrking");
+            $(".cardpointeButton").hide();
+
+            var customerID=$.trim($("select[name=customer_id]").val());
+            if(customerID.length==0)
+            {
+                $(".cardpointeButton").show();
+                //$("#payModal").modal('hide');
+                $(".hidestripemsg").html(warningMessage("Please select a customer."));
+                return false;
+            }
+
+            var parseNewPayment=0;
+
+            var amount_to_pay=$("input[name=amount_to_pay]").val();                
+            var expaid=$("#posCartSummary tr:eq(4)").find("td:eq(2)").children("span").html();
+            if($.trim(expaid)==0)
+            {
+                var parseNewPayment=parseFloat(amount_to_pay).toFixed(2);
+            }
+            else
+            {
+                var newpayment=(expaid-0)+(amount_to_pay-0);
+                var parseNewPayment=parseFloat(newpayment).toFixed(2);
+            }
+
+
+
+            var cardNumber=$.trim($(".cardPointe-cardnumber").val());
+            if(cardNumber.length==0)
+            {
+                $(".cardpointeButton").show();
+                $(".hidestripemsg").show();
+                $(".hidestripemsg").html(warningMessage("Please type card number."));
+                return false;
+            }
+
+            var cardHName=$.trim($(".cardPointe-cardholder").val());
+            if(cardHName.length==0)
+            {
+                $(".cardpointeButton").show();
+                $(".hidestripemsg").show();
+                $(".hidestripemsg").html(warningMessage("Please type card holder name."));
+                return false;
+            }
+
+            var cardMonth=$.trim($(".cardPointe-month").val());
+            if(cardMonth.length==0)
+            {
+                $(".cardpointeButton").show();
+                $(".hidestripemsg").show();
+                $(".hidestripemsg").html(warningMessage("Please type card expire month."));
+                return false;
+            }
+
+
+            var cardYear=$.trim($(".cardPointe-year").val());
+            if(cardYear.length==0)
+            {
+                $(".cardpointeButton").show();
+                $(".hidestripemsg").show();
+                $(".hidestripemsg").html(warningMessage("Please type card expire Year."));
+                return false;
+            }
+
+
+            var cardcvc=$.trim($(".cardPointe-cvc").val());
+            if(cardcvc.length==0)
+            {
+                $(".cardpointeButton").show();
+                $(".hidestripemsg").show();
+                $(".hidestripemsg").html(warningMessage("Please type card cvc/cvc2 pin."));
+                return false;
+            }
+
+            $(".hidestripemsg").show();
+            $(".hidestripemsg").html(loadingOrProcessing("CardPointe payment please wait...."));
+
+
+
+            var addCardPointePaymentURL="{{url('cardpointe/pos/payment')}}";
+             $.ajax({
+                'async': true,
+                'type': "POST",
+                'global': false,
+                'dataType': 'json',
+                'url': addCardPointePaymentURL,
+                'data': {
+                    'cardNumber':cardNumber,
+                    'cardHName':cardHName,
+                    'cardMonth':cardMonth,
+                    'cardYear':cardYear,
+                    'cardcvc':cardcvc,
+                    'amountToPay':parseNewPayment,
+                    '_token':"{{csrf_token()}}"},
+                'success': function (data) {
+                    console.log("cardPointe Print Sales ID : "+data);
+                    if(data==null)
+                    {
+                        $(".cardpointeButton").show();
+                        $(".hidestripemsg").show();
+                        $(".hidestripemsg").html(warningMessage("Failed to authorize payment. Please try again."));
+                    }
+                    else
+                    {
+                        console.log(data.status);
+                        if(data.status==1)
+                        {
+                            var amount_to_pay=$("input[name=amount_to_pay]").val();
+                            
+                            var expaid=$("#posCartSummary tr:eq(4)").find("td:eq(2)").children("span").html();
+                            if($.trim(expaid)==0)
+                            {
+                                var parseNewPayment=parseFloat(amount_to_pay).toFixed(2);
+                                $("#posCartSummary tr:eq(4)").find("td:eq(2)").children("span").html(parseNewPayment);
+                            }
+                            else
+                            {
+                                var newpayment=(expaid-0)+(amount_to_pay-0);
+                                var parseNewPayment=parseFloat(newpayment).toFixed(2);
+                                $("#posCartSummary tr:eq(4)").find("td:eq(2)").children("span").html(parseNewPayment);
+                            }
+                            genarateSalesTotalCart();
+                            //------------------------Ajax POS Start-------------------------//
+                            var AddPOSUrl="{{url('sales/cart/payment')}}";
+                            $.post(AddPOSUrl,{'paymentID':25,'paidAmount':parseNewPayment,'_token':"{{csrf_token()}}"},function(response){
+                               // setTimeout(function(){ $("#CustomerCard").modal('show'); }, 3000);
+                            });
+                            //------------------------Ajax POS End---------------------------//
+                            $(".hidestripemsg").show();
+                            $(".hidestripemsg").html(successMessage(data.message));
+                            
+                            setTimeout(function(){
+                                    $("#cardPointeCustomerCard").modal('hide');
+                            }, 3000);
+
+                            $("#cartMessageProShow").show();
+                            $("#cartMessageProShow").html(successMessage("Payment completed, Please click on print/complete sale."));
+
+                        }
+                        else
+                        {
+                            $(".hidestripemsg").show();
+                            $(".cardpointeButton").show();
+                            $(".hidestripemsg").html(warningMessage(data.message));
+                        }
+                    }
+                    //$(".message-place-authorizenet").html("dddd");
+                }
+            });
+            //------------------------Ajax Customer End---------------------------//
+        });
+        //cardPointe end
 
 
         //stripe start

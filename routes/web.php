@@ -11,6 +11,9 @@
 |
 */
 
+
+Route::get('backup', 'ActivityController@dbbackup');
+
 Route::get('/', function () {
     return redirect('login');
 });
@@ -25,6 +28,19 @@ Route::post('capture/pos/payment/publicpayment','InvoiceController@AuthorizenetC
 Route::post('/capture/inv/payment', 'InvoiceProductController@getPaidCartPublic');
 Route::get('/capture/invoice/print/pdf/{invoice_id}', 'InvoiceController@captureInvoicePDF');
 //customer pay url
+
+
+//-----------------------bolt Start ----------------||
+
+Route::get('bolt/ping', 'CardPointeeController@boltPing');
+Route::post('bolt/capture', 'CardPointeeController@boltCaptureCard');
+Route::post('bolt/token', 'CardPointeeController@boltGenarateNewToken');
+
+//-----------------------bolt End ------------------||
+
+//-----------------Cardpointe Start-----------------||
+Route::get('/cardpointe/test', 'CardPointeeController@testM');
+//-----------------Cardpointe End-------------------||
 
 // Route::get('/form', 'HomeController@form')->name('form');
 Route::get('/form', 'HomeController@form')->name('form');
@@ -58,6 +74,10 @@ Route::get('pdf', 'InvoiceController@GenaratePDF');
 Route::post('check/idle/user', 'ActivityController@idleCheck');
 
 Route::group(['middleware' => 'auth'], function () { 
+
+	Route::get('/paypal/account/setting', 'InvoiceController@paypalAccountSettings');
+	Route::post('/paypal/account/setting', 'InvoiceController@paypalAccountSaveSettings');
+	Route::post('/paypal/account/update/setting', 'InvoiceController@paypalAccountSaveSettings');
 
 	Route::post('/chat/message/send', 'ChatController@store');
 	Route::post('/chat/message/load', 'ChatController@index');
@@ -621,13 +641,15 @@ Route::group(['middleware' => 'auth'], function () {
 
 	//-------------------Settings Started----------------------------//
 	Route::get('settings/barcode', 'BuybackController@createBarcode');
+	Route::post('genarate/barcode', 'BuybackController@genarateBarcode');
+	
 	Route::get('settings/instorerepair', 'InStoreRepairController@create');
 	Route::get('settings/instore/merge/repair/data', 'InStoreRepairController@mergeDataTostore');
 	Route::post('settings/instore/merge/repair/store', 'InStoreRepairController@mergestoreData');
 	Route::post('settings/instore/clear/repair/store', 'InStoreRepairController@clearstoreData');
 	Route::post('settings/instorerepair', 'InStoreRepairController@store');
 	Route::post('instorerepair/model/ajax', 'InStoreRepairController@deviceModel');
-	Route::post('genarate/barcode', 'BuybackController@genarateBarcode');
+	
 
 
 	Route::get('pos/settings', 'PosSettingController@index');
@@ -710,6 +732,8 @@ Route::group(['middleware' => 'auth'], function () {
 	Route::get('/authorize/net/payment/test','AuthorizeNetPaymentController@index');
 	Route::post('/authorize/net/capture/pos/payment','InvoiceController@AuthorizenetCardPayment');
 	Route::post('/authorize/net/capture/pos/partial/payment','InvoiceController@AuthorizenetCardPartialPayment');
+
+
 	Route::get('/authorize/net/payment/history','AuthorizeNetPaymentHistoryController@index');
 	Route::post('/authorize/net/payment/data/json','AuthorizeNetPaymentHistoryController@datajson');
 	Route::post('/authorize/net/payment/refund','InvoiceController@refund');
@@ -724,7 +748,6 @@ Route::group(['middleware' => 'auth'], function () {
 	Route::post('/authorize/net/payment/history/pdf/report', 'AuthorizeNetPaymentHistoryController@PdfReport');
 
 
-
 	Route::get('/stripe/payment/history', 'StripePaymentController@show');
 	Route::post('/stripe/payment/data/json', 'StripePaymentController@datajson');
 	Route::post('/stripe/payment/history/report','StripePaymentController@show');
@@ -735,9 +758,25 @@ Route::group(['middleware' => 'auth'], function () {
 	Route::get('/stripe/account/setting', 'StripePaymentController@stripeSettings');
 	Route::post('/stripe/account/setting', 'StripePaymentController@stripeSettingsSave');
 	Route::post('/stripe/account/update/setting', 'StripePaymentController@stripeSettingsUpdate');
-
-
 	Route::post('stripe', 'InvoiceController@stripeCardPayment')->name('stripe.post');
+
+	Route::get('/cardpointe/account/setting', 'CardPointeeController@cardPointeSettings');
+	Route::post('/cardpointe/account/setting', 'CardPointeeController@cardPointeSettingsSave');
+	Route::post('/cardpointe/account/update/setting', 'CardPointeeController@cardPointeSettingsUpdate');
+
+	Route::post('/cardpointe/pos/payment','CardPointeeController@cardpointePayment');
+
+	
+
+	Route::get('/cardpointe/payment/history','CardPointeeController@index');
+	Route::post('/cardpointe/payment/data/json','CardPointeeController@datajson');
+	Route::post('/cardpointe/payment/history/report','CardPointeeController@show');
+	Route::post('/cardpointe/payment/history/excel/report', 'CardPointeeController@ExcelReport');
+	Route::post('/cardpointe/payment/history/pdf/report', 'CardPointeeController@PdfReport');
+	Route::post('/cardpointe/payment/refund','CardPointeeController@refund');
+
+	Route::get('/cardpointe/genarate/encode','CardPointeeController@genarteencodeCardPointee');
+	Route::post('/cardpointe/genarate/encode','CardPointeeController@genarteencodeCardPointeeSave');
 	//----------------Authorize.net Payment Route End-----------------------------//
 
 });
