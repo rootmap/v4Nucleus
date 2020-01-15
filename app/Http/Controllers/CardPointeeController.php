@@ -4,6 +4,10 @@ namespace App\Http\Controllers;
 
 use App\CardpointeStoreSetting;
 use App\CardPointee;
+use App\Invoice;
+use App\InvoicePayment;
+use App\Tender;
+use App\Customer;
 use Session;
 use DB;
 use App\Pos;
@@ -334,6 +338,234 @@ class CardPointeeController extends Controller
 
 
 
+    public function boltCaptureCardPartialPayment(Request $request){
+            ini_set('max_execution_time', '300');
+            $storeMerchantSetBoltCheck=CardpointeStoreSetting::where('store_id',$this->sdc->storeID())->where('bolt_status',1)->count();
+            if($storeMerchantSetBoltCheck>0){
+
+
+                    $storeBolt=CardpointeStoreSetting::where('store_id',$this->sdc->storeID())->where('bolt_status',1)->first();
+
+                    $merchantId=$storeBolt->merchant_id;
+                    $hsn=$storeBolt->hsn;
+                    $Authorization=$storeBolt->authkey;
+
+                    //echo $merchantId; die();
+
+                    $dayDate=date('Y-m-d', strtotime('+1 day')); 
+                    $dayDateTime=date('H:i:s'); 
+
+                    $dayString=$dayDate."T".$dayDateTime."Z";
+
+                    //die();
+
+                    //echo rand(); die();
+                    //echo md5(time()); die();
+
+                    if(!empty($merchantId) && !empty($hsn) && !empty($Authorization)){
+
+
+                            $invoiceID=$request->invoice_id;
+                            $invoice_id=$invoiceID;
+                            $amountToPay=$request->amountToPay*100;
+                            $amountPaid=$request->amountToPay;
+
+                            //dd($amountToPay);
+
+                            $cardsession=$request->cardsession;
+
+                                $curl = curl_init();
+
+                                curl_setopt_array($curl, array(
+                                  CURLOPT_URL => "https://bolt.cardpointe.com/api/v3/authCard",
+                                  CURLOPT_RETURNTRANSFER => true,
+                                  CURLOPT_ENCODING => "",
+                                  CURLOPT_MAXREDIRS => 10,
+                                  CURLOPT_TIMEOUT => 0,
+                                  CURLOPT_FOLLOWLOCATION => true,
+                                  CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                                  CURLOPT_CUSTOMREQUEST => "POST",
+                                  CURLOPT_POSTFIELDS =>"{\r\n\"merchantId\" : \"$merchantId\",\r\n\"hsn\" : \"$hsn\",\r\n\"amount\" : \"$amountToPay\",\r\n\"includeSignature\" : \"false\",\r\n\"includeAmountDisplay\" : \"true\",\r\n\"beep\" : \"true\",\r\n\"aid\" : \"credit\",\r\n\"includeAVS\" : \"true\",\r\n\"capture\" : \"true\",\r\n\"orderId\" : \"$invoiceID\",\r\n\"clearDisplayDelay\" : \"500\"\r\n}",
+                                  CURLOPT_HTTPHEADER => array(
+                                    "Content-Type: application/json",
+                                    "Authorization: ".$Authorization,
+                                    "X-CardConnect-SessionKey: ".$cardsession
+                                  ),
+                                ));
+
+
+
+
+                                $response = curl_exec($curl);
+
+                                curl_close($curl);
+
+                                $gCAT=json_decode($response,true);
+                                //dd($gCAT);
+                               //s echo "<pre>";
+                               // print_r($gCAT); die();
+                                if(isset($gCAT['errorCode'])){
+                                    return response()->json(['status'=>0,'message'=>$gCAT['errorMessage'],'datares'=>$gCAT]);
+                                }
+                                else
+                                {
+                                    if($gCAT['resptext']=="Approval" && $gCAT['respstat']=="A"){
+             //dd($gCAT);
+                                        //dd($gCAT);
+                                        $tab=new CardPointee;
+                                        $tab->invoice_id=$invoiceID;
+                                        $tab->responseJson=json_encode($gCAT);
+                                        $tab->card_number="bolt";
+                                        $tab->card_holder_name="bolt";
+                                        $tab->card_expire_month="bolt";
+                                        $tab->card_expire_year="bolt";
+                                        $tab->card_cvc="bolt";
+                                        $tab->amount=$request->amountToPay;
+                                        $tab->authCode=$gCAT['authcode'];
+                                        $tab->token=$gCAT['token'];
+                                        $tab->account="";
+                                        $tab->retref=$gCAT['retref'];
+                                        $tab->resptext=$gCAT['resptext'];
+                                        $tab->respstat=$gCAT['respstat'];
+                                        $tab->commcard="";
+                                        $tab->respcode=$gCAT['respcode'];
+                                        $tab->refund_status=0;
+                                        $tab->store_id=$this->sdc->storeID();
+                                        $tab->created_by=$this->sdc->UserID();
+                                        $tab->save();
+
+
+
+
+
+                                        $invoice=Invoice::where('invoice_id',$invoice_id)->first();
+                                        $customerInfo=Customer::find($invoice->customer_id);
+                                        $customerName=$customerInfo->name;
+
+                                        $tenderData=Tender::where('cardpointe',1)->first();
+                                        $payment_method=$tenderData->id;
+
+                                        $loadInvoices=Invoice::join('customers','invoices.customer_id','=','customers.id')
+                                                              ->select(
+                                                                'invoices.id',
+                                                                'invoices.invoice_id',
+                                                                'invoices.total_amount',
+                                                                'invoices.paid_amount',
+                                                                'customers.name as customer_name',
+                                                                \DB::Raw('CASE WHEN lsp_invoices.paid_amount = 0 THEN 
+                                                                    (SELECT SUM(paid_amount) FROM lsp_invoice_payments WHERE lsp_invoice_payments.invoice_id=lsp_invoices.invoice_id)
+                                                                ELSE lsp_invoices.paid_amount END AS absPaid'),
+                                                                'invoices.created_at')
+                                                              ->where('invoices.store_id',$this->sdc->storeID())
+                                                              ->where('invoices.invoice_id',$invoice_id)
+                                                              ->whereRaw("lsp_invoices.invoice_status!='Paid'")
+                                                              ->first();
+
+                                        $invoice=Invoice::where('invoice_id',$invoice_id)->first();
+                                        //dd($invoiceData);
+
+
+
+                                        $cusInfo=Customer::find($invoice->customer_id);
+
+                                        $paid_amount=$request->amountToPay;
+
+                                        $load_total_amount=$loadInvoices->total_amount;
+                                        $load_absPaid=$loadInvoices->absPaid+$paid_amount;
+                                        $load_due=$load_total_amount-$load_absPaid;
+                                        if($load_due>0)
+                                        {
+                                            $load_invoice_status="Partial";
+                                        }
+                                        elseif($load_due<=0)
+                                        {
+                                            $load_invoice_status="Paid";
+                                            $load_due="0.00";
+                                        }
+                                        else
+                                        {
+                                            $load_invoice_status="Partial";
+                                        }
+
+
+                                        $tender=Tender::find($payment_method);
+                                        $tender_name=$tender->name;
+                                        $tender_id=$tender->id;
+
+                                        $invoice->tender_id=$tender_id;
+                                        $invoice->tender_name=$tender_name;
+                                        $invoice->save();
+                                        
+
+                                        $chkTicketInvoice=\DB::table('in_store_tickets')->where('store_id',$this->sdc->storeID())->where('invoice_id',$invoice_id)->count();
+                                        if($chkTicketInvoice>0)
+                                        {
+                                            \DB::table('in_store_tickets')->where('store_id',$this->sdc->storeID())->where('invoice_id',$invoice_id)->update(['payment_status'=>$load_invoice_status]);
+                                        }
+
+                                        $chkRepairInvoice=\DB::table('in_store_repairs')->where('store_id',$this->sdc->storeID())->where('invoice_id',$invoice_id)->count();
+                                        if($chkRepairInvoice>0)
+                                        {
+                                            \DB::table('in_store_repairs')->where('store_id',$this->sdc->storeID())->where('invoice_id',$invoice_id)->update(['payment_status'=>$load_invoice_status]);
+                                        }
+
+                                        $invoicePay=new InvoicePayment;
+                                        $invoicePay->invoice_id=$invoice_id;
+                                        $invoicePay->customer_id=$invoice->customer_id;
+                                        $invoicePay->customer_name=$cusInfo->name;
+                                        $invoicePay->tender_id=$tenderData->id;
+                                        $invoicePay->tender_name=$tenderData->name;
+                                        $invoicePay->total_amount=$invoice->total_amount;
+                                        $invoicePay->paid_amount=$amountPaid;
+                                        $invoicePay->store_id=$this->sdc->storeID();
+                                        $invoicePay->created_by=$this->sdc->UserID();
+                                        $invoicePay->save();
+
+                                        if($load_due<=0)
+                                        {
+                                            $invoice->due_amount="0.00";
+                                        }
+                                        
+                                        $invoice->invoice_status=$load_invoice_status;
+                                        $invoice->save();
+
+
+
+
+                                        return response()->json(['status'=>1,'message'=>$gCAT['resptext'],'datares'=>$gCAT]);
+
+                                        //dd($gCAT);
+                                    }
+                                    else
+                                    {
+                                         return response()->json(['status'=>0,'message'=>$gCAT['resptext'],'datares'=>$gCAT]);
+                                       // dd($gCAT->resptext);
+                                    }
+                                }
+
+
+                                
+
+                                //echo $response;
+
+                    }
+                    else
+                    {
+                        return response()->json(['status'=>0,'message'=>"Invalid Bolt Info"]);
+                    }
+
+
+
+
+            }
+            else
+            {
+                return response()->json(['status'=>0,'message'=>"Missing Bolt Info"]);
+            }
+    }
+
+
+
 
     public function cardpointePayment(Request $request){
 
@@ -418,6 +650,184 @@ class CardPointeeController extends Controller
                 $tab->store_id=$this->sdc->storeID();
                 $tab->created_by=$this->sdc->UserID();
                 $tab->save();
+
+                return response()->json(['status'=>1,'message'=>$gCAT['resptext'],'datares'=>$gCAT]);
+
+                //dd($gCAT);
+            }
+            else
+            {
+                 return response()->json(['status'=>0,'message'=>$gCAT['resptext'],'datares'=>$gCAT]);
+               // dd($gCAT->resptext);
+            }
+        }
+        else
+        {
+            return response()->json(['status'=>0,'message'=>$gCAT['resptext'],'datares'=>$gCAT]);
+               // dd($gCAT->resptext);
+        }
+
+        
+
+    }
+
+    public function cardpointePartialPayment(Request $request){
+
+
+        $invoice_id=$request->invoice_id;
+        $refId=$invoice_id;
+        $cardNumber=trim(str_replace(" ","",$request->cardNumber)); 
+        $cardMonth=trim($request->cardMonth);
+        $cardYear=trim($request->cardYear);
+
+        $yy="";
+        if(strlen($cardYear)==4){
+            $yy=substr($cardYear,2);
+        }
+
+        $expireDate=$cardMonth."".$yy;
+
+        //$invoice=Invoice::where('invoice_id',$invoice_id)->first();
+       // dd($invoice);
+        
+        $amountPaid=$request->amountToPay;
+
+        if(!$expireDate)
+        {
+           return response()->json(['status'=>0,'message'=>'Card Expire date invalid.']);
+        }
+
+        if(empty($request->amountToPay))
+        {
+            return response()->json(['status'=>0,'message'=>'Pay amount should not be empty.']);
+        }
+
+        $gCAT=$this->makePayment($cardNumber,$request->amountToPay,$expireDate,$invoice_id,$request);
+        //dd($gCAT); die();
+
+        if(isset($gCAT->datares))
+        {
+            return response()->json(['status'=>0,'message'=>$gCAT->resptext,'datares'=>$gCAT]);
+        }
+
+        
+        if(isset($gCAT['respstat']))
+        {
+            if($gCAT['resptext']=="Approval" && $gCAT['respstat']=="A"){
+             //dd($gCAT);
+
+                $tab=new CardPointee;
+                $tab->invoice_id=$refId;
+                $tab->responseJson=json_encode($gCAT);
+                $tab->card_number=$cardNumber;
+                $tab->card_holder_name=$request->cardHName;
+                $tab->card_expire_month=$request->cardMonth;
+                $tab->card_expire_year=$request->cardYear;
+                $tab->card_cvc=$request->cardcvc;
+                $tab->amount=$request->amountToPay;
+                $tab->authCode=$gCAT['authcode'];
+                $tab->token=$gCAT['token'];
+                $tab->account=$gCAT['account'];
+                $tab->retref=$gCAT['retref'];
+                $tab->resptext=$gCAT['resptext'];
+                $tab->respstat=$gCAT['respstat'];
+                $tab->commcard="";
+                $tab->respcode=$gCAT['respcode'];
+                $tab->refund_status=0;
+                $tab->store_id=$this->sdc->storeID();
+                $tab->created_by=$this->sdc->UserID();
+                $tab->save();
+
+                $invoice=Invoice::where('invoice_id',$invoice_id)->first();
+                $customerInfo=Customer::find($invoice->customer_id);
+                $customerName=$customerInfo->name;
+
+                $tenderData=Tender::where('cardpointe',1)->first();
+                $payment_method=$tenderData->id;
+
+                $loadInvoices=Invoice::join('customers','invoices.customer_id','=','customers.id')
+                                      ->select(
+                                        'invoices.id',
+                                        'invoices.invoice_id',
+                                        'invoices.total_amount',
+                                        'invoices.paid_amount',
+                                        'customers.name as customer_name',
+                                        \DB::Raw('CASE WHEN lsp_invoices.paid_amount = 0 THEN 
+                                            (SELECT SUM(paid_amount) FROM lsp_invoice_payments WHERE lsp_invoice_payments.invoice_id=lsp_invoices.invoice_id)
+                                        ELSE lsp_invoices.paid_amount END AS absPaid'),
+                                        'invoices.created_at')
+                                      ->where('invoices.store_id',$this->sdc->storeID())
+                                      ->where('invoices.invoice_id',$invoice_id)
+                                      ->whereRaw("lsp_invoices.invoice_status!='Paid'")
+                                      ->first();
+
+                $invoice=Invoice::where('invoice_id',$invoice_id)->first();
+                //dd($invoiceData);
+
+
+
+                $cusInfo=Customer::find($invoice->customer_id);
+
+                $paid_amount=$request->amountToPay;
+
+                $load_total_amount=$loadInvoices->total_amount;
+                $load_absPaid=$loadInvoices->absPaid+$paid_amount;
+                $load_due=$load_total_amount-$load_absPaid;
+                if($load_due>0)
+                {
+                    $load_invoice_status="Partial";
+                }
+                elseif($load_due<=0)
+                {
+                    $load_invoice_status="Paid";
+                    $load_due="0.00";
+                }
+                else
+                {
+                    $load_invoice_status="Partial";
+                }
+
+
+                $tender=Tender::find($payment_method);
+                $tender_name=$tender->name;
+                $tender_id=$tender->id;
+
+                $invoice->tender_id=$tender_id;
+                $invoice->tender_name=$tender_name;
+                $invoice->save();
+                
+
+                $chkTicketInvoice=\DB::table('in_store_tickets')->where('store_id',$this->sdc->storeID())->where('invoice_id',$invoice_id)->count();
+                if($chkTicketInvoice>0)
+                {
+                    \DB::table('in_store_tickets')->where('store_id',$this->sdc->storeID())->where('invoice_id',$invoice_id)->update(['payment_status'=>$load_invoice_status]);
+                }
+
+                $chkRepairInvoice=\DB::table('in_store_repairs')->where('store_id',$this->sdc->storeID())->where('invoice_id',$invoice_id)->count();
+                if($chkRepairInvoice>0)
+                {
+                    \DB::table('in_store_repairs')->where('store_id',$this->sdc->storeID())->where('invoice_id',$invoice_id)->update(['payment_status'=>$load_invoice_status]);
+                }
+
+                $invoicePay=new InvoicePayment;
+                $invoicePay->invoice_id=$invoice_id;
+                $invoicePay->customer_id=$invoice->customer_id;
+                $invoicePay->customer_name=$cusInfo->name;
+                $invoicePay->tender_id=$tenderData->id;
+                $invoicePay->tender_name=$tenderData->name;
+                $invoicePay->total_amount=$invoice->total_amount;
+                $invoicePay->paid_amount=$amountPaid;
+                $invoicePay->store_id=$this->sdc->storeID();
+                $invoicePay->created_by=$this->sdc->UserID();
+                $invoicePay->save();
+
+                if($load_due<=0)
+                {
+                    $invoice->due_amount="0.00";
+                }
+                
+                $invoice->invoice_status=$load_invoice_status;
+                $invoice->save();
 
                 return response()->json(['status'=>1,'message'=>$gCAT['resptext'],'datares'=>$gCAT]);
 
@@ -598,10 +1008,49 @@ class CardPointeeController extends Controller
         return $capture_response;
     }
 
-    private function VoidTrans($client,$auth_retref=""){
-        $params=[];
-        $capture_response = $client->void($auth_retref, $params);
-        return $capture_response;
+    public function VoidTrans($orderid=0,$auth_retref=""){
+
+        $storeMerchantSetCount=CardpointeStoreSetting::where('store_id',$this->sdc->storeID())->count();
+        if($storeMerchantSetCount==0){
+            echo "credentials failed."; die();
+            return (object)array('status'=>0,'message'=>'Invalid credentials');
+                die();
+
+        }else{
+
+            $storeMerchantSet=CardpointeStoreSetting::where('store_id',$this->sdc->storeID())->first();
+
+                $merchant_id = $storeMerchantSet->merchant_id;
+                $user        = $storeMerchantSet->username;
+                $authkey        = $storeMerchantSet->password;
+                $server      = 'https://fts.cardconnect.com/cardconnect/rest/voidByOrderId';
+
+            $curl = curl_init();
+
+            curl_setopt_array($curl, array(
+              CURLOPT_URL => $server,
+              CURLOPT_RETURNTRANSFER => true,
+              CURLOPT_ENCODING => "",
+              CURLOPT_MAXREDIRS => 10,
+              CURLOPT_TIMEOUT => 0,
+              CURLOPT_FOLLOWLOCATION => true,
+              CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+              CURLOPT_CUSTOMREQUEST => "PUT",
+              CURLOPT_POSTFIELDS =>"{\n    \"merchid\": \"$merchant_id\",\n    \"orderid\": \"$orderid\"\n}",
+              CURLOPT_HTTPHEADER => array(
+                "Authorization: Basic ".$authkey,
+                "Content-Type: application/json"
+              ),
+            ));
+
+            $response = curl_exec($curl);
+
+            curl_close($curl);
+
+            echo $response;
+        }
+
+
     }
 
     private function inQueryTrans($client,$auth_retref=""){
@@ -610,11 +1059,92 @@ class CardPointeeController extends Controller
         return $capture_response;
     }
 
-    private function reFundTrans($client,$auth_retref=""){
-        $params = []; // optional
-        $void_response = $client->refund(array('retref'=>$auth_retref));
+    private function reFundTrans($orderid=0,$auth_retref=""){
+        $storeMerchantSetCount=CardpointeStoreSetting::where('store_id',$this->sdc->storeID())->count();
+        if($storeMerchantSetCount==0){
+            //echo "credentials failed."; die();
+            return (object)array('status'=>0,'message'=>'Invalid credentials');
+                die();
 
-        return $void_response;
+        }else{
+
+            $storeMerchantSet=CardpointeStoreSetting::where('store_id',$this->sdc->storeID())->first();
+
+                $merchant_id = $storeMerchantSet->merchant_id;
+                $user        = $storeMerchantSet->username;
+                $authkey        = $storeMerchantSet->password;
+                $server      = 'https://fts.cardconnect.com/cardconnect/rest/voidByOrderId';
+
+            $curl = curl_init();
+
+            curl_setopt_array($curl, array(
+              CURLOPT_URL => $server,
+              CURLOPT_RETURNTRANSFER => true,
+              CURLOPT_ENCODING => "",
+              CURLOPT_MAXREDIRS => 10,
+              CURLOPT_TIMEOUT => 0,
+              CURLOPT_FOLLOWLOCATION => true,
+              CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+              CURLOPT_CUSTOMREQUEST => "PUT",
+              CURLOPT_POSTFIELDS =>"{\n    \"merchid\": \"$merchant_id\",\n    \"orderid\": \"$orderid\"\n}",
+              CURLOPT_HTTPHEADER => array(
+                "Authorization: Basic ".$authkey,
+                "Content-Type: application/json"
+              ),
+            ));
+
+            $response = curl_exec($curl);
+
+            curl_close($curl);
+
+            return (object)json_decode($response,true);
+
+            //echo $response;
+        }
+    }
+
+    private function boltreFundTrans($orderid=0,$auth_retref=""){
+        $storeMerchantSetCount=CardpointeStoreSetting::where('store_id',$this->sdc->storeID())->count();
+        if($storeMerchantSetCount==0){
+            //echo "credentials failed."; die();
+            return (object)array('status'=>0,'message'=>'Invalid credentials');
+                die();
+
+        }else{
+
+            $storeMerchantSet=CardpointeStoreSetting::where('store_id',$this->sdc->storeID())->first();
+
+                $merchant_id = $storeMerchantSet->merchant_id;
+                $user        = $storeMerchantSet->username;
+                $authkey        = $storeMerchantSet->password;
+                $server      = 'https://fts.cardconnect.com/cardconnect/rest/voidByOrderId';
+
+            $curl = curl_init();
+
+            curl_setopt_array($curl, array(
+              CURLOPT_URL => $server,
+              CURLOPT_RETURNTRANSFER => true,
+              CURLOPT_ENCODING => "",
+              CURLOPT_MAXREDIRS => 10,
+              CURLOPT_TIMEOUT => 0,
+              CURLOPT_FOLLOWLOCATION => true,
+              CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+              CURLOPT_CUSTOMREQUEST => "PUT",
+              CURLOPT_POSTFIELDS =>"{\n    \"merchid\": \"$merchant_id\",\n    \"retref\": \"$orderid\"\n}",
+              CURLOPT_HTTPHEADER => array(
+                "Authorization: Basic ".$authkey,
+                "Content-Type: application/json"
+              ),
+            ));
+
+            $response = curl_exec($curl);
+
+            curl_close($curl);
+
+            return (object)json_decode($response,true);
+
+            //echo $response;
+        }
     }
 
     /*  Store Settings Start */
@@ -747,8 +1277,42 @@ class CardPointeeController extends Controller
             $refId='ref' .time();
             $aNpH=CardPointee::find($id);
             //die($aNpH);
-            $retData=$this->makeRefund($aNpH->retref);
-            //dd($retData);
+            $retData=$this->reFundTrans($aNpH->invoice_id);
+           // dd($retData);
+
+            $statusReturn=0;
+            if($retData->resptext=="Approval" && $retData->respstat=="A")
+            {
+                $aNpH->refund_status=1;
+                $statusReturn=1;
+            }
+            else
+            {
+                $aNpH->refund_status=0;
+            }
+            $aNpH->save();
+            //return $statusReturn;
+
+            return response()->json(['status'=>$statusReturn,'res'=>$retData]);
+        }
+        else
+        {
+            return 0;
+        }
+        
+           
+    }
+
+    public function boltrefund(Request $request)
+    {
+        $id=$request->rid;
+        if(!empty($request->rid))
+        {
+            $refId='ref' .time();
+            $aNpH=CardPointee::find($id);
+            //die($aNpH);
+            $retData=$this->boltreFundTrans($aNpH->retref);
+           // dd($retData);
 
             $statusReturn=0;
             if($retData->resptext=="Approval" && $retData->respstat=="A")

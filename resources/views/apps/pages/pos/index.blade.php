@@ -451,6 +451,7 @@
            @include('apps.include.modal.CustomerCardModal')
            @include('apps.include.modal.stripeCardModal',compact('stripe'))
            @include('apps.include.modal.cardPointeCardModal')
+           @include('apps.include.modal.cardPointepartialCardModal')
            {{-- @include('apps.include.modal.CustomerPartialCardModal') --}}
            @include('apps.include.modal.paymodal',compact('stripe'))
            @include('apps.include.modal.open-drawer')
@@ -1920,6 +1921,15 @@
 
         //stripe start
         $(".stripe_card_payment").click(function(){
+
+
+            var stripepartialURL="{{url('stripe')}}";
+
+            $("#payment-form-stripe").attr("action",stripepartialURL);
+            $("#partial_invoice_id").val(0);
+            $("#partial_today_paid").val(0);
+
+
             var customerID=$.trim($("select[name=customer_id]").val());
             if(customerID.length==0)
             {

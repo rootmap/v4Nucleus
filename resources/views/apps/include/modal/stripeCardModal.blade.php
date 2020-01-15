@@ -44,7 +44,7 @@
                     <form role="form" action="{{ route('stripe.post') }}" method="post" class="require-validation"
                                                      data-cc-on-file="false"
                                                     data-stripe-publishable-key="{{ $stripe?$stripe->publishable_key:'0' }}"
-                                                    id="payment-form">
+                                                    id="payment-form-stripe">
                         {{csrf_field()}}
   
                         <div class='form-row row'>
@@ -73,6 +73,8 @@
                                     class='form-control card-expiry-month' placeholder='MM' size='2'
                                     type='text'>
                             </div>
+                            <input type="hidden" name="partial_invoice_id" id="partial_invoice_id" value="0">
+                            <input type="hidden" name="partial_today_paid" id="partial_today_paid" value="0">
                             <div class='col-xs-12 col-md-4 form-group expiration required'>
                                 <label class='control-label'>Expiration Year</label> 
                                 <input class='form-control card-expiry-year' placeholder='YYYY' size='4'    type='text'>
@@ -108,6 +110,10 @@ $(function() {
 
     var $form         = $(".require-validation");
   $('form.require-validation').bind('submit', function(e) {
+
+    var partial_invoice_id=$("#partial_invoice_id").val();
+    var partial_today_paid=$("#partial_today_paid").val();
+
     var $form         = $(".require-validation"),
         inputSelector = ['input[type=email]', 'input[type=password]',
                          'input[type=text]', 'input[type=file]',

@@ -34,6 +34,7 @@ Route::get('/capture/invoice/print/pdf/{invoice_id}', 'InvoiceController@capture
 
 Route::get('bolt/ping', 'CardPointeeController@boltPing');
 Route::post('bolt/capture', 'CardPointeeController@boltCaptureCard');
+Route::post('bolt/partial/capture', 'CardPointeeController@boltCaptureCardPartialPayment');
 Route::post('bolt/token', 'CardPointeeController@boltGenarateNewToken');
 
 //-----------------------bolt End ------------------||
@@ -759,12 +760,15 @@ Route::group(['middleware' => 'auth'], function () {
 	Route::post('/stripe/account/setting', 'StripePaymentController@stripeSettingsSave');
 	Route::post('/stripe/account/update/setting', 'StripePaymentController@stripeSettingsUpdate');
 	Route::post('stripe', 'InvoiceController@stripeCardPayment')->name('stripe.post');
+	Route::post('stripepartial', 'InvoiceController@stripeMnaulPartialCardPayment')->name('stripe.partial');
 
 	Route::get('/cardpointe/account/setting', 'CardPointeeController@cardPointeSettings');
 	Route::post('/cardpointe/account/setting', 'CardPointeeController@cardPointeSettingsSave');
 	Route::post('/cardpointe/account/update/setting', 'CardPointeeController@cardPointeSettingsUpdate');
 
 	Route::post('/cardpointe/pos/payment','CardPointeeController@cardpointePayment');
+
+	Route::post('/cardpointe/partial/payment','CardPointeeController@cardpointePartialPayment');
 
 	
 
@@ -774,6 +778,7 @@ Route::group(['middleware' => 'auth'], function () {
 	Route::post('/cardpointe/payment/history/excel/report', 'CardPointeeController@ExcelReport');
 	Route::post('/cardpointe/payment/history/pdf/report', 'CardPointeeController@PdfReport');
 	Route::post('/cardpointe/payment/refund','CardPointeeController@refund');
+	Route::post('/cardpointe/bolt/payment/refund','CardPointeeController@boltrefund');
 
 	Route::get('/cardpointe/genarate/encode','CardPointeeController@genarteencodeCardPointee');
 	Route::post('/cardpointe/genarate/encode','CardPointeeController@genarteencodeCardPointeeSave');

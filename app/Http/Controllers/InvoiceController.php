@@ -3079,11 +3079,193 @@ class InvoiceController extends Controller
         {
             return redirect(url('pos'))->with('error', 'Please Setup Stripe Credential on settings.');
         }
+    }
+
+    public function stripeMnaulPartialCardPayment(Request $request)
+    {
+        $stripe='';
+        $stripe_store_settings=\DB::table('stripe_store_settings')->where('module_status',1)->where('store_id',$this->sdc->storeID())->count();
+        if($stripe_store_settings>0)
+        {
+            $stripe=\DB::table('stripe_store_settings')->where('store_id',$this->sdc->storeID())->first();
+
+
+            $invoice_id=$request->partial_invoice_id;
+            $partial_today_paid=$request->partial_today_paid;
+            $refId=$invoice_id;
+
+            $invoice=Invoice::where('invoice_id',$invoice_id)->first();
+
+           
+
+
+            $customerInfo=Customer::find($invoice->customer_id);
+            $customerName=$customerInfo->name;
+
+            //dd($customerInfo);
+               
+            $totalInvoicePayable=$partial_today_paid;
+
+            //dd($totalInvoicePayable);
+            
+
+
+            
+
+            if(empty($totalInvoicePayable))
+            {
+                return redirect(url('pos'))->with('error', 'Partial Paid Amount is Empty.');
+            }
+
+            //dd($request->amountToPay);
+
+            Stripe\Stripe::setApiKey($stripe->secret_key);
+            $payment=Stripe\Charge::create ([
+                "amount" => $totalInvoicePayable * 100,
+                "currency" => "usd",
+                "source" => $request->stripeToken,
+                "description" => "INV - ".$invoice_id." partial payment from v4.nucleuspos.com." 
+            ]);
+
+            $paidAmount=$payment->amount/100;
+
+           //dd($payment);              
+           
+
+            if($payment->status=="succeeded")
+            {
+
+                $tab=new StripeTransactionHistory;
+                $tab->invoice_id=$invoice_id;
+                $tab->customer_id=$invoice->customer_id;
+                $tab->customer_name=$customerName;
+                $tab->transactionID=$payment->id;
+                
+                $tab->paid_amount=$paidAmount;
+                $tab->card_number=$payment->source->last4;
+                $tab->card_holder_name="";
+                $tab->card_expire_month=$payment->source->exp_month;
+                $tab->card_expire_year=$payment->source->exp_year;
+                $tab->card_cvc=$payment->source->last4;
+
+//brand
+                $tab->authCode=$payment->payment_method;
+                $tab->refTransID=$payment->refunds->url;
+                $tab->CardType=$payment->source->brand;
+                $tab->transactionHash=$payment->balance_transaction;
+                $tab->message=json_encode($payment);
+
+                $tab->store_id=$this->sdc->storeID();
+                $tab->created_by=$this->sdc->UserID();
+                $tab->save();
+
+                $amountPaid=$paidAmount;
+                //dd($amountPaid);
+
+                $tenderData=Tender::where('stripe',1)->first();
+                $payment_method=$tenderData->id;
+
+                $loadInvoices=Invoice::join('customers','invoices.customer_id','=','customers.id')
+                                      ->select(
+                                        'invoices.id',
+                                        'invoices.invoice_id',
+                                        'invoices.total_amount',
+                                        'invoices.paid_amount',
+                                        'customers.name as customer_name',
+                                        \DB::Raw('CASE WHEN lsp_invoices.paid_amount = 0 THEN 
+                                            (SELECT SUM(paid_amount) FROM lsp_invoice_payments WHERE lsp_invoice_payments.invoice_id=lsp_invoices.invoice_id)
+                                        ELSE lsp_invoices.paid_amount END AS absPaid'),
+                                        'invoices.created_at')
+                                      ->where('invoices.store_id',$this->sdc->storeID())
+                                      ->where('invoices.invoice_id',$invoice_id)
+                                      ->whereRaw("lsp_invoices.invoice_status!='Paid'")
+                                      ->first();
+
+                $invoice=Invoice::where('invoice_id',$invoice_id)->first();
+                //dd($invoiceData);
 
 
 
-        
-        
+                $cusInfo=Customer::find($invoice->customer_id);
+
+                $paid_amount=$request->amountToPay;
+
+                $load_total_amount=$loadInvoices->total_amount;
+                $load_absPaid=$loadInvoices->absPaid+$paid_amount;
+                $load_due=$load_total_amount-$load_absPaid;
+                if($load_due>0)
+                {
+                    $load_invoice_status="Partial";
+                }
+                elseif($load_due<=0)
+                {
+                    $load_invoice_status="Paid";
+                    $load_due="0.00";
+                }
+                else
+                {
+                    $load_invoice_status="Partial";
+                }
+
+
+                $tender=Tender::find($payment_method);
+                $tender_name=$tender->name;
+                $tender_id=$tender->id;
+
+                $invoice->tender_id=$tender_id;
+                $invoice->tender_name=$tender_name;
+                $invoice->save();
+                
+
+                $chkTicketInvoice=\DB::table('in_store_tickets')->where('store_id',$this->sdc->storeID())->where('invoice_id',$invoice_id)->count();
+                if($chkTicketInvoice>0)
+                {
+                    \DB::table('in_store_tickets')->where('store_id',$this->sdc->storeID())->where('invoice_id',$invoice_id)->update(['payment_status'=>$load_invoice_status]);
+                }
+
+                $chkRepairInvoice=\DB::table('in_store_repairs')->where('store_id',$this->sdc->storeID())->where('invoice_id',$invoice_id)->count();
+                if($chkRepairInvoice>0)
+                {
+                    \DB::table('in_store_repairs')->where('store_id',$this->sdc->storeID())->where('invoice_id',$invoice_id)->update(['payment_status'=>$load_invoice_status]);
+                }
+
+                $invoicePay=new InvoicePayment;
+                $invoicePay->invoice_id=$invoice_id;
+                $invoicePay->customer_id=$invoice->customer_id;
+                $invoicePay->customer_name=$cusInfo->name;
+                $invoicePay->tender_id=$tenderData->id;
+                $invoicePay->tender_name=$tenderData->name;
+                $invoicePay->total_amount=$invoice->total_amount;
+                $invoicePay->paid_amount=$amountPaid;
+                $invoicePay->store_id=$this->sdc->storeID();
+                $invoicePay->created_by=$this->sdc->UserID();
+                $invoicePay->save();
+
+                if($load_due<=0)
+                {
+                    $invoice->due_amount="0.00";
+                }
+                
+                $invoice->invoice_status=$load_invoice_status;
+                $invoice->save();
+
+
+                return redirect(url('pos'))->with('status','Stripe Payment is successful');
+            }
+            else
+            {
+                return redirect(url('pos'))->with('error','Failed, Invalid Card / Insufficient Fund.');
+            }
+
+
+           
+
+
+        }
+        else
+        {
+            return redirect(url('pos'))->with('error', 'Please Setup Stripe Credential on settings.');
+        }
     }
 
     public function AuthorizenetCardPayment(Request $request)
@@ -6017,7 +6199,7 @@ class InvoiceController extends Controller
             return response()->json(0);
        }
     }
-
+    
     public function savePartialPaidInvoice(Request $request)
     {
         $invoice_id=$request->invoice_id;

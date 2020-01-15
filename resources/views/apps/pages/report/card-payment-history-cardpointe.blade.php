@@ -189,9 +189,22 @@
 @section('RoleWiseMenujs')
    <script>
 
-   	function actionTemplate(id,refund_status){
+   	function actionTemplate(id,refund_status,card){
    		var strHTML='';
-	    	if(refund_status==0){
+   		if(card=='bolt'){
+   			if(refund_status==0){
+	    	strHTML+='<button onclick="refundwithretTransaction('+id+')" type="button" class="btn btn-green"  ';
+		    	@if($userguideInit==1) 
+		    		strHTML+='data-step="7" data-intro="Payment could be refund using click on this button." ';
+		    	@endif
+	    	strHTML+='><i class="icon-moneybag"></i> Refund Bolt Amount</button>';
+	    	}else{
+	    		strHTML+='	<button type="button" class="btn btn-green"><i class="icon-moneybag"></i> Refund Bolt Complete</button>';
+	    	}
+   		}
+   		else
+   		{
+   			if(refund_status==0){
 	    	strHTML+='<button onclick="refundTransaction('+id+')" type="button" class="btn btn-green"  ';
 		    	@if($userguideInit==1) 
 		    		strHTML+='data-step="7" data-intro="Payment could be refund using click on this button." ';
@@ -200,6 +213,8 @@
 	    	}else{
 	    		strHTML+='	<button type="button" class="btn btn-green"><i class="icon-moneybag"></i> Refund Complete</button>';
 	    	}
+   		}
+	    	
 
 		return strHTML;
    	}
@@ -250,7 +265,7 @@
 						strHTML+='		<td>************'+replaceNull(row.card_number)+'</td>';
 						strHTML+='		<td>'+replaceNull(row.retref)+'</td>';
 						strHTML+='		<td>'+replaceNull(row.amount)+'</td>';
-						strHTML+='		<td>'+actionTemplate(row.id,row.refund_status)+'</td>';
+						strHTML+='		<td>'+actionTemplate(row.id,row.refund_status,row.card_number)+'</td>';
 						strHTML+='</tr>';
 
 						//totalPrice+=replaceNull(row.price)-0;
@@ -281,6 +296,36 @@
 		function refundTransaction(id)
 		{
 			var c=confirm('Are you sure to refund this transaction ?');
+			if(c)
+			{
+				//------------------------Ajax Customer Start-------------------------//
+		         var AddHowMowKhaoUrl="{{url('cardpointe/payment/refund')}}";
+		         $.ajax({
+		            'async': true,
+		            'type': "POST",
+		            'global': false,
+		            'dataType': 'json',
+		            'url': AddHowMowKhaoUrl,
+		            'data': {'rid':id,'_token':"{{csrf_token()}}"},
+		            'success': function (data) {
+		            	console.log(data);
+		                if(data.status==1)
+		                {
+		                	window.location.reload();
+		                }
+		                else
+		                {
+		                	alert('Something went wrong, Please try again.');
+		                }
+		            }
+		        });
+		        //------------------------Ajax Customer End---------------------------//
+			}
+		}
+
+		function refundwithretTransaction(id)
+		{
+			var c=confirm('Are you sure to refund this bolt transaction ?');
 			if(c)
 			{
 				//------------------------Ajax Customer Start-------------------------//
